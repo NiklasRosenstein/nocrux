@@ -84,10 +84,6 @@ class Daemon(object):
   def __init__(
       self, name, prog, args=(), cwd=None, user=None, group=None,
       stdin=None, stdout=None, stderr=None, pidfile=None):
-
-    if cwd and not os.path.isdir(cwd):
-      raise ValueError('directory {!r} does not exist'.format(cwd))
-
     if not pidfile:
       pidfile = abspath(name + '.pid')
     if stdout is None:
