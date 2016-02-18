@@ -119,7 +119,7 @@ class Daemon(object):
     if pid > 0:
       # Wait until the child process started the actual daemon.
       if os.waitpid(pid, 0)[1] == 0:
-        print('[{}]: started'.format(self.name))
+        print('[{}]: started (PID: {})'.format(self.name, self.pid()))
       else:
         print('[{}]: could not be started'.format(self.name))
       return True
