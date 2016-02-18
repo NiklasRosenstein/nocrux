@@ -27,7 +27,9 @@ Daemon(
 
 __Todo__
 
-* [ ] Confirm or update to ensure Krugs works with shells other than Bash
+* [ ] Code cleanup
+* [ ] Support for daemon dependencies
+* [ ] Confirm/update Krugs to ensure it works with shells other than Bash
 
 __Requirements__
 
