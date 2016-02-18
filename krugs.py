@@ -52,16 +52,22 @@ class Daemon(object):
   :param user: The name of the user to execute the daemon as.
   :param group: The name of the group to execute the daemon as.
   :param login: If true, the ``-l`` option is passed to bash.
+  :param cwd: The working directory for the daemon process.
+    Defaults to the HOME directory of the user that executes
+    the process.
   '''
 
   objects = {}
 
   def __init__(self, name, bin, args=(), pidfile=None,
       stdin='/dev/null', stdout=None, stderr=None,
-      user=None, group=None, login=True):
+      user=None, group=None, login=True, cwd=None):
 
     if name in Daemon.objects:
       raise ValueError('daemon name {!r} already reserved'.format(name))
+    if cwd and not os.path.isdir(cwd):
+      raise ValueError('directory {!r} does not exist'.format(cwd))
+
     if not pidfile:
       pidfile = abspath(name + '.pid')
     if stdout is None:
@@ -77,6 +83,7 @@ class Daemon(object):
     self.user = user
     self.group = group
     self.login = login
+    self.cwd = cwd
     Daemon.objects[name] = self
 
   def pid(self):
@@ -141,7 +148,19 @@ class Daemon(object):
           sys.exit(errno.EPERM)
       if home:
         os.environ['HOME'] = home
-      command = [self.bin] + self.args
+
+      if self.cwd:
+        os.chdir(self.cwd)
+      else:
+        os.chdir(os.environ['HOME'])
+
+      # Generate the comamnd to execute.
+      command = ' '.join(map(shlex.quote, [self.bin] + self.args))
+      shell = [os.environ['SHELL']]
+      if self.login:
+        shell.append('-l')
+      shell.append('-c')
+      shell.append(command)
 
       # Redirect the standard in, out and error.
       si = open(self.stdin, 'r')
@@ -155,13 +174,7 @@ class Daemon(object):
       os.dup2(se.fileno(), sys.stderr.fileno())
 
       # Execute the daemon.
-      command = ' '.join(map(shlex.quote, [self.bin] + self.args))
-      shell = [os.environ['SHELL']]
-      if self.login:
-        shell.append('-l')
-      shell.append('-c')
-      shell.append(command)
-      process = subprocess.Popen(shell, shell=True)
+      process = subprocess.Popen(shell)
       pidf.write(str(process.pid))
       sys.exit(0)
     finally:
