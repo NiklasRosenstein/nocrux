@@ -280,6 +280,11 @@ def load_config(filename):
   module.expanduser = os.path.expanduser
   module.register_daemon = register_daemon
 
+  # Initialize default values for configuration parameters before
+  # executing the configure script.
+  module.root_dir = os.path.expanduser('~/.krugs')
+  module.kill_timeout = 10
+
   global config
   config = module
 
