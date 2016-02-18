@@ -21,7 +21,6 @@ Daemon(
   args = ['42'],
   user = None,
   group = None,
-  login = True,
 )
 ```
 

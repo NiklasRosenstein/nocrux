@@ -51,7 +51,6 @@ class Daemon(object):
     the file is piped into the same file/device as *stdout*.
   :param user: The name of the user to execute the daemon as.
   :param group: The name of the group to execute the daemon as.
-  :param login: If true, the ``-l`` option is passed to bash.
   :param cwd: The working directory for the daemon process.
     Defaults to the HOME directory of the user that executes
     the process.
@@ -61,7 +60,7 @@ class Daemon(object):
 
   def __init__(self, name, bin, args=(), pidfile=None,
       stdin='/dev/null', stdout=None, stderr=None,
-      user=None, group=None, login=True, cwd=None):
+      user=None, group=None, cwd=None):
 
     if name in Daemon.objects:
       raise ValueError('daemon name {!r} already reserved'.format(name))
@@ -82,7 +81,6 @@ class Daemon(object):
     self.stderr = stderr
     self.user = user
     self.group = group
-    self.login = login
     self.cwd = cwd
     Daemon.objects[name] = self
 
