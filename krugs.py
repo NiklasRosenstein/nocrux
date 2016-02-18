@@ -155,12 +155,7 @@ class Daemon(object):
         os.chdir(os.environ['HOME'])
 
       # Generate the comamnd to execute.
-      command = ' '.join(map(shlex.quote, [self.bin] + self.args))
-      shell = [os.environ['SHELL']]
-      if self.login:
-        shell.append('-l')
-      shell.append('-c')
-      shell.append(command)
+      command = [self.bin] + self.args
 
       # Redirect the standard in, out and error.
       si = open(self.stdin, 'r')
@@ -169,19 +164,17 @@ class Daemon(object):
         se = open(self.stderr, 'a+')
       else:
         se = so
+
+      # Print the command before updating the in/out/err file handles.
+      print('[{}]: $'.format(self.name), ' '.join(map(shlex.quote, command)))
       os.dup2(si.fileno(), sys.stdin.fileno())
       os.dup2(so.fileno(), sys.stdout.fileno())
       os.dup2(se.fileno(), sys.stderr.fileno())
 
       # Execute the daemon.
-      process = subprocess.Popen(shell)
+      process = subprocess.Popen(command)
       pidf.write(str(process.pid))
 
-      # Wait only for a short time, eventually the process quits
-      # immediately and bash returns an error code.
-      time.sleep(0.1)
-      if process.poll() is not None:
-        sys.exit(process.returncode)
       sys.exit(0)
     finally:
       pidf.close()
