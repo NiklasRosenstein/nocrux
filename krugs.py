@@ -176,6 +176,12 @@ class Daemon(object):
       # Execute the daemon.
       process = subprocess.Popen(shell)
       pidf.write(str(process.pid))
+
+      # Wait only for a short time, eventually the process quits
+      # immediately and bash returns an error code.
+      time.sleep(0.1)
+      if process.poll() is not None:
+        sys.exit(process.returncode)
       sys.exit(0)
     finally:
       pidf.close()
