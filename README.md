@@ -1,6 +1,4 @@
-# Krugs - Simple daemon manager
-
-![license MIT](http://i.imgur.com/uc37iNC.png) ![status beta stable](http://i.imgur.com/4SVCaU2.png)
+# Krugs - Simple daemon manager ![](http://i.imgur.com/TV2l7Iy.png) ![](http://i.imgur.com/uuTtLzU.png)
 
 Krugs is a simple manager for daemon processes. It is easier to use and
 deploy than using/writing `init.d` scripts and the Unix `service` command.
