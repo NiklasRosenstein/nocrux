@@ -138,7 +138,7 @@ class Daemon(object):
     ''' Prints a message with the name of the daemon as its prefix. '''
 
     if self._log_newline:
-      print('Krugs: [{}]:'.format(self.name), *message, **kwargs)
+      print('-  [{}]'.format(self.name), *message, **kwargs)
     else:
       print(*message, **kwargs)
     self._log_newline = '\n' in kwargs.get('end', '\n')
@@ -216,7 +216,7 @@ class Daemon(object):
       # Print the command before updating the in/out/err file handles
       # so the caller of Krugs can still read it.
       command = [self.prog] + self.args
-      self.log('running:', ' '.join(map(shlex.quote, command)))
+      self.log('running', ' '.join(map(shlex.quote, command)))
 
       # Replace the standard file handles and execute the daemon process.
       os.dup2(si.fileno(), sys.stdin.fileno())
@@ -294,13 +294,15 @@ def load_config(filename):
 
 def main():
   parser = argparse.ArgumentParser(prog='krugs', description='A simple daemon manager')
-  parser.add_argument('command', choices=['start', 'stop', 'restart', 'status', 'version', 'list'])
+  parser.add_argument('command', choices=['start', 'stop', 'restart', 'status', 'version'])
   parser.add_argument('daemons', nargs='*', default=[])
   args = parser.parse_args()
 
   if args.command == 'version':
     print('Krugs v{}'.format(__version__))
     return 0
+  if not args.daemons:
+    parser.error('need at least one argument for "daemons"')
 
   # Load the Krugs configuration file.
   config_file = os.path.expanduser('~/krugs_config.py')
@@ -308,23 +310,19 @@ def main():
     parser.error('~/krugs_config.py does not exist')
   load_config(config_file)
 
-  try:
-    target_daemons = [daemons[x] for x in args.daemons]
-  except KeyError as exc:
-    parser.error('unknown daemon {!r}'.format(str(exc)))
+  if args.daemons == ['all']:
+    target_daemons = daemons.values()
+  else:
+    try:
+      target_daemons = [daemons[x] for x in args.daemons]
+    except KeyError as exc:
+      parser.error('unknown daemon {!r}'.format(str(exc)))
 
   if args.command == 'status':
-    for daemon in (target_daemons or daemons.values()):
+    for daemon in target_daemons:
       daemon.log(daemon.status)
     return 0
-  elif args.command == 'list':
-    for daemon in daemons.keys():
-      print(daemon)
-    return 0
-  elif not args.daemons:
-    parser.error('need at least one argument for "daemons"')
-
-  if args.command == 'stop':
+  elif args.command == 'stop':
     for daemon in target_daemons:
       if not daemon.stop():
         return 1
