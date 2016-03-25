@@ -4,19 +4,23 @@ Krugs is a simple manager for daemon processes. It is easier to use and
 deploy than using/writing `init.d` scripts and the Unix `service` command.
 Also, Krugs can be used by any user and not just root.
 
-Krugs only works Unix-like systems.
+Krugs only works with Unix-like systems.
 
-    niklas@sunbird:~$ krugs status
-    Krugs: [test]: stopped
+    niklas@sunbird:~$ krugs status test
+    - [test]: stopped
     niklas@sunbird:~$ krugs start test
-    Krugs: [test]: running: /home/niklas/Desktop/my-daemon.sh
-    Krugs: [test]: started (PID: 4717)
+    - [test]: running /home/niklas/Desktop/my-daemon.sh
+    - [test]: started (PID: 4717)
     niklas@sunbird:~$ krugs status
-    Krugs: [test]: started
+    - [test]: started
     niklas@sunbird:~$ krugs stop test
-    Krugs: [test]: stopping... stopped
-    niklas@sunbird:~$ krugs status
-    Krugs: [test]: stopped
+    - [test]: stopping... stopped
+    niklas@sunbird:~$ krugs status all
+    - [test]: stopped
+    niklas@sunbird:~$ krugs tail test
+    Sleeping 60 seconds from now ...
+    Complete.
+    Sleeping 60 seconds from now ...
 
 __Configuration__
 
@@ -32,7 +36,7 @@ imported manually:
 ```python
 # The path of the folder that contains the PID files and standard error
 # and output files for relative paths.
-root_dir = expanduser('~/.krugs/run')
+root_dir = expanduser('~/.krugs')
 
 # The maximum number of seconds to wait after SIGTERM to send SIGKILL.
 kill_timeout = 10
@@ -89,3 +93,11 @@ __Todo__
 __Requirements__
 
 * Python 3
+
+__Changelog__
+
+*v1.0.1*
+
+* Add `krugs tail <daemon> [-e/-stderr]` command
+* Add special deaemon name `all`
+* Fix `krugs restart` command
