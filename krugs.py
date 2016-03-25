@@ -336,8 +336,7 @@ def main():
     return 0
   elif args.command == 'restart':
     for daemon in target_daemons:
-      if not daemon.stop():
-        return 1
+      daemon.stop()
     for daemon in target_daemons:
       if not daemon.start():
         return 1
