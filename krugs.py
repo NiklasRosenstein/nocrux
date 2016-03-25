@@ -294,8 +294,9 @@ def load_config(filename):
 
 def main():
   parser = argparse.ArgumentParser(prog='krugs', description='A simple daemon manager')
-  parser.add_argument('command', choices=['start', 'stop', 'restart', 'status', 'version'])
+  parser.add_argument('command', choices=['start', 'stop', 'restart', 'status', 'version', 'tail'])
   parser.add_argument('daemons', nargs='*', default=[])
+  parser.add_argument('-e', '--stderr', action='store_true', help='show stderr for the "tail" command')
   args = parser.parse_args()
 
   if args.command == 'version':
@@ -311,7 +312,7 @@ def main():
   load_config(config_file)
 
   if args.daemons == ['all']:
-    target_daemons = daemons.values()
+    target_daemons = list(daemons.values())
   else:
     try:
       target_daemons = [daemons[x] for x in args.daemons]
@@ -339,5 +340,23 @@ def main():
       if not daemon.start():
         return 1
     return 0
+  elif args.command == 'tail':
+    if len(target_daemons) != 1 or args.daemons == ['all']:
+      parser.error('can only select one daemon for "tail" command')
+    daemon = target_daemons[0]
+    if args.stderr:
+      if not daemon.stderr:
+        daemon.log('no stderr')
+        return 1
+      fn = daemon.stderr
+    else:
+      if not daemon.stdout:
+        daemon.log('no stdout')
+        return 1
+      fn = daemon.stdout
+    try:
+      return subprocess.call(['tail', '-f', fn])
+    except KeyboardInterrupt:
+      return 0
 
   parser.error('unknown command {!r}'.format(args.command))
