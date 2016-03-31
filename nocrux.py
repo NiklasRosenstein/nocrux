@@ -19,7 +19,7 @@
 # THE SOFTWARE.
 
 __author__ = 'Niklas Rosenstein <rosensteinniklas@gmail.com>'
-__version__ = '1.0.1'
+__version__ = '1.1.0'
 
 import argparse
 import errno
@@ -30,6 +30,7 @@ import shlex
 import signal
 import subprocess
 import sys
+import textwrap
 import time
 import types
 
@@ -75,7 +76,7 @@ def process_exists(pid):
 
 
 class Daemon(object):
-  ''' Configuration for a daemon process. See ``krugs_config.py``
+  ''' Configuration for a daemon process. See ``nocrux_config.py``
   for an explanation of the parameters. '''
 
   Status_Started = 'started'
@@ -214,7 +215,7 @@ class Daemon(object):
       se = open(self.stderr, 'a+') if self.stderr else so
 
       # Print the command before updating the in/out/err file handles
-      # so the caller of Krugs can still read it.
+      # so the caller of nocrux can still read it.
       command = [self.prog] + self.args
       self.log('running', ' '.join(map(shlex.quote, command)))
 
@@ -256,7 +257,7 @@ class Daemon(object):
 
 
 def register_daemon(**kwargs):
-  ''' Register a daemon to Krugs. The arguments are the same as for
+  ''' Register a daemon to nocrux. The arguments are the same as for
   the :class:`Daemon` class, though only keyword-arguments are accepted. '''
 
   daemon = Daemon(**kwargs)
@@ -266,10 +267,10 @@ def register_daemon(**kwargs):
 
 
 def load_config(filename):
-  ''' Load the Krugs configuration from *filename*. This effectively
+  ''' Load the nocrux configuration from *filename*. This effectively
   executes *filename* and returns a Python module object. '''
 
-  module = types.ModuleType('krugs_config')
+  module = types.ModuleType('nocrux_config')
   module.__file__ = filename
   module.join = os.path.join
   module.split = os.path.split
@@ -278,7 +279,7 @@ def load_config(filename):
 
   # Initialize default values for configuration parameters before
   # executing the configure script.
-  module.root_dir = os.path.expanduser('~/.krugs')
+  module.root_dir = os.path.expanduser('~/.nocrux')
   module.kill_timeout = 10
 
   global config
@@ -293,22 +294,59 @@ def load_config(filename):
 
 
 def main():
-  parser = argparse.ArgumentParser(prog='krugs', description='A simple daemon manager')
+  parser = argparse.ArgumentParser(prog='nocrux',
+    formatter_class=argparse.RawDescriptionHelpFormatter,
+    description=textwrap.dedent('''
+      nocrux is a painless per-user daemon manager. Every user can
+      configure daemons in the `~/nocrux_config.py` file using the
+      `register_daemon()` function. An example configuration file
+      may look like this:
+
+      ```python
+      root_dir = expanduser('~/.nocrux')  # default
+      kill_timeout = 10  # default
+      register_daemon(
+        name = 'test',
+        prog = expanduser('~/Desktop/my-daemon.sh'),
+        args = [],     # default
+        cwd  = '~',    # default, automatically expanded after setting user ID
+        user = None,   # name of the user, defaults to current user
+        group = None,  # name of the group, defaults to current user group
+        stdin = None,  # stdin file, defaults to /dev/null
+        stdout = None, # stdout file, defaults to ${root_dir}/${name}.out
+        stderr = None, # stderr file, defaults to stdout
+        pidfile = None,# pid file, defaults to ${root_dir}/${name}.pid
+      )
+      ```
+
+      The daemon can then be controlled by the `nocrux` command.
+
+          $ nocrux start test
+          -  [test] running test
+          -  [test] started (PID: 5887)
+          $ nocrux status all
+          -  [test] started
+          $ nocrux tail test
+          This is from my-daemon.sh
+          ^C
+          $ nocrux stop all
+          -  [test] stopped
+      '''))
   parser.add_argument('command', choices=['start', 'stop', 'restart', 'status', 'version', 'tail'])
   parser.add_argument('daemons', nargs='*', default=[])
   parser.add_argument('-e', '--stderr', action='store_true', help='show stderr for the "tail" command')
   args = parser.parse_args()
 
   if args.command == 'version':
-    print('Krugs v{}'.format(__version__))
+    print('nocrux v{}'.format(__version__))
     return 0
   if not args.daemons:
     parser.error('need at least one argument for "daemons"')
 
-  # Load the Krugs configuration file.
-  config_file = os.path.expanduser('~/krugs_config.py')
+  # Load the nocrux configuration file.
+  config_file = os.path.expanduser('~/nocrux_config.py')
   if not os.path.isfile(config_file):
-    parser.error('~/krugs_config.py does not exist')
+    parser.error('"{0}" does not exist'.format(config_file))
   load_config(config_file)
 
   if args.daemons == ['all']:

@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-import krugs, sys
+import nocrux, sys
 
 if __name__ == '__main__':
-  sys.exit(krugs.main())
+  sys.exit(nocrux.main())
