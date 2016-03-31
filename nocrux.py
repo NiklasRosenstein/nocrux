@@ -294,7 +294,8 @@ def load_config(filename):
 
 
 def main():
-  parser = argparse.ArgumentParser(prog='nocrux',
+  parser = argparse.ArgumentParser(
+    prog='nocrux',
     formatter_class=argparse.RawDescriptionHelpFormatter,
     description=textwrap.dedent('''
       nocrux is a painless per-user daemon manager. Every user can
@@ -332,9 +333,20 @@ def main():
           $ nocrux stop all
           -  [test] stopped
       '''))
-  parser.add_argument('command', choices=['start', 'stop', 'restart', 'status', 'version', 'tail'])
-  parser.add_argument('daemons', metavar='daemon', nargs='*', default=[])
-  parser.add_argument('-e', '--stderr', action='store_true', help='show stderr for the "tail" command')
+  parser.add_argument(
+    'command',
+    choices=['start', 'stop', 'restart', 'status', 'version', 'tail'])
+  parser.add_argument(
+    'daemons',
+    metavar='daemon',
+    nargs='*',
+    default=[],
+    help="name of one or more daemons to interact with. the special name"
+         "'all' can be used to refer to all registered daemons")
+  parser.add_argument(
+    '-e', '--stderr',
+    action='store_true',
+    help="display stderr rather than stdout. only used for the 'tail' command")
   args = parser.parse_args()
 
   if args.command == 'version':

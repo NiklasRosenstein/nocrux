@@ -44,6 +44,19 @@ The daemon can then be controlled by the `nocrux` command.
     $ nocrux stop all
     -  [test] stopped
 
+```
+positional arguments:
+  {start,stop,restart,status,version,tail}
+  daemon                name of one or more daemons to interact with. the
+                        special name'all' can be used to refer to all
+                        registered daemons
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -e, --stderr          display stderr rather than stdout. only used for the
+                        'tail' command
+```
+
 __DEPENDENCIES__
 
 * Python 3
