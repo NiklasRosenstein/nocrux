@@ -333,7 +333,7 @@ def main():
           -  [test] stopped
       '''))
   parser.add_argument('command', choices=['start', 'stop', 'restart', 'status', 'version', 'tail'])
-  parser.add_argument('daemons', nargs='*', default=[])
+  parser.add_argument('daemons', metavar='daemon', nargs='*', default=[])
   parser.add_argument('-e', '--stderr', action='store_true', help='show stderr for the "tail" command')
   args = parser.parse_args()
 

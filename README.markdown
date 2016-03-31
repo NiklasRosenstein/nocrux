@@ -5,7 +5,7 @@ __NAME__
 __SYNOPSIS__
 
     nocrux [-h] [-e] {start,stop,restart,status,version,tail}
-           [daemons [daemons ...]]
+           [daemon [daemon ...]]
 
 __DESCRIPTION__
 
