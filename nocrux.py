@@ -19,7 +19,7 @@
 # THE SOFTWARE.
 
 __author__ = 'Niklas Rosenstein <rosensteinniklas@gmail.com>'
-__version__ = '1.1.0'
+__version__ = '1.1.1-dev'
 
 import argparse
 import errno
@@ -70,8 +70,9 @@ def process_exists(pid):
     return False
   try:
     os.kill(pid, 0)
-  except OSError:
-    return False
+  except OSError as exc:
+    if exc.errno == errno.ESRCH:
+      return False
   return True
 
 
@@ -139,7 +140,7 @@ class Daemon(object):
     ''' Prints a message with the name of the daemon as its prefix. '''
 
     if self._log_newline:
-      print('-  [{}]'.format(self.name), *message, **kwargs)
+      print('[nocrux]: ({0})'.format(self.name), *message, **kwargs)
     else:
       print(*message, **kwargs)
     self._log_newline = '\n' in kwargs.get('end', '\n')
@@ -163,14 +164,17 @@ class Daemon(object):
       record = grp.getgrnam(self.group)
       gid = record.gr_gid
 
-    # Fork so we can update detach, etc. The parent waits until
-    # the child exits to figure if the process could be started.
+    # Fork so we can detach from the parent process etc. The parent
+    # will wait for a little time to check if the process has started.
     pid = os.fork()
     if pid > 0:
-      if os.waitpid(pid, 0)[1] == 0:
-        self.log('started (PID: {})'.format(self.pid))
+      time.sleep(0.20)
+      pid = self.pid
+      if process_exists(pid):
+        self.log('started. (pid: {0})'.format(pid))
       else:
-        self.log('could not be started, check the output file eventually')
+        outname = 'err' if self.stderr else 'out'
+        self.log('could not be started. try  "tail -f $(nocrux fn:{0} {1})"'.format(outname, self.name))
       return True
 
     # Make sure the directory of the PID and output files exist.
@@ -179,55 +183,66 @@ class Daemon(object):
     makedirs(os.path.dirname(self.stdout))
     makedirs(os.path.dirname(self.stderr or self.stdout))
 
-    pidf = open(self.pidfile, 'w')
+    # Detach the process and set the user and group IDs if applicable.
+    os.setsid()
+    if uid is not None:
+      try:
+        os.setuid(uid)
+      except OSError as exc:
+        if exc.errno != errno.EPERM:
+          raise
+        self.log('not permitted to change to user {!r}'.format(self.user))
+        sys.exit(errno.EPERM)
+    if gid is not None:
+      try:
+        os.setgid(gid)
+      except OSError as exc:
+        if exc.errno != errno.EPERM:
+          raise
+        self.log('not permitted to change to group {!r}'.format(self.group))
+        sys.exit(errno.EPERM)
+
+    # Update the HOME environment variable and switch the working
+    # directory for the daemon process.
+    if home:
+      os.environ['HOME'] = home
+    if self.cwd:
+      os.chdir(os.path.expanduser(self.cwd))
+    else:
+      os.chdir(os.environ['HOME'])
+
+    # Open the input file and output files for the daemon.
+    si = open(self.stdin, 'r')
+    so = open(self.stdout, 'a+')
+    se = open(self.stderr, 'a+') if self.stderr else so
+
+    # Print the command before updating the in/out/err file handles
+    # so the caller of nocrux can still read it.
+    command = [self.prog] + self.args
+    self.log('starting', '"' + ' '.join(map(shlex.quote, command)) + '"')
+
+    # Replace the standard file handles and execute the daemon process.
+    os.dup2(si.fileno(), sys.stdin.fileno())
+    os.dup2(so.fileno(), sys.stdout.fileno())
+    os.dup2(se.fileno(), sys.stderr.fileno())
+    process = subprocess.Popen(command)
     try:
-      # Detach the process and set the user and group IDs if applicable.
-      os.setsid()
-      if uid is not None:
-        try:
-          os.setuid(uid)
-        except OSError as exc:
-          if exc.errno != errno.EPERM:
-            raise
-          self.log('not permitted to change to user {!r}'.format(self.user))
-          sys.exit(errno.EPERM)
-      if gid is not None:
-        try:
-          os.setgid(gid)
-        except OSError as exc:
-          if exc.errno != errno.EPERM:
-            raise
-          self.log('not permitted to change to group {!r}'.format(self.group))
-          sys.exit(errno.EPERM)
+      with open(self.pidfile, 'w') as pidf:
+        pidf.write(str(process.pid))
+    except OSError as exc:
+      process.kill()
+      process.wait()
+      self.log('pid file "{0}" could not be created.'.format(self.pidfile), file=sys.stderr)
+      self.log('process killed. error:', exc, file=sys.stderr)
 
-      # Update the HOME environment variable and switch the working
-      # directory for the daemon process.
-      if home:
-        os.environ['HOME'] = home
-      if self.cwd:
-        os.chdir(os.path.expanduser(self.cwd))
-      else:
-        os.chdir(os.environ['HOME'])
-
-      # Open the input file and output files for the daemon.
-      si = open(self.stdin, 'r')
-      so = open(self.stdout, 'a+')
-      se = open(self.stderr, 'a+') if self.stderr else so
-
-      # Print the command before updating the in/out/err file handles
-      # so the caller of nocrux can still read it.
-      command = [self.prog] + self.args
-      self.log('running', ' '.join(map(shlex.quote, command)))
-
-      # Replace the standard file handles and execute the daemon process.
-      os.dup2(si.fileno(), sys.stdin.fileno())
-      os.dup2(so.fileno(), sys.stdout.fileno())
-      os.dup2(se.fileno(), sys.stderr.fileno())
-      process = subprocess.Popen(command)
-      pidf.write(str(process.pid))
-      sys.exit(0)
-    finally:
-      pidf.close()
+    # Wait until the process exits to delete the pidfile.
+    process.wait()
+    self.log('terminated. exit code: {0}'.format(process.returncode), file=sys.stderr)
+    try:
+      os.remove(self.pidfile)
+    except OSError:
+      self.log('warning: pid file "{0}" could not be removed'.format(self.pidfile), file=sys.stderr)
+    sys.exit(0)
 
   def stop(self):
     ''' Stop the daemon if it is running. Sends :data:`signal.SIGTERM`
@@ -235,25 +250,30 @@ class Daemon(object):
     sends ``signal.SIGKILL`` if the process hasn't terminated by then. '''
 
     pid = self.pid
+    if pid == 0:
+      self.log('daemon not running')
+      return
+
     try:
       os.kill(pid, signal.SIGTERM)
-    except OSError:
-      self.log('not started')
+    except OSError as exc:
+      self.log('failed:', exc)
     else:
       self.log('stopping...', end=' ')
       tstart = time.time()
       while time.time() - tstart < config.kill_timeout and process_exists(pid):
         time.sleep(0.5)
       if process_exists(pid):
-        self.log('not stopped.', end=' ')
-        try:
-          os.kill(pid, signal.SIGKILL)
-        except OSError:
-          self.log('stopped')
+        self.log('failed')
+        self.log('killing...')
+        try: os.kill(pid, signal.SIGKILL)
+        except OSError: pass
+        if process_exists(pid):
+          self.log('failed')
         else:
-          self.log('SIGKILL')
+          self.log('done')
       else:
-        self.log('stopped')
+        self.log('done')
 
 
 def register_daemon(**kwargs):
@@ -262,7 +282,7 @@ def register_daemon(**kwargs):
 
   daemon = Daemon(**kwargs)
   if daemon.name in daemons:
-    raise ValueError('daemon name {!r} already used'.format(daemon))
+    raise ValueError('daemon name {!r} already in use'.format(daemon))
   daemons[daemon.name] = daemon
 
 
@@ -323,15 +343,23 @@ def main():
       The daemon can then be controlled by the `nocrux` command.
 
           $ nocrux start test
-          -  [test] running test
-          -  [test] started (PID: 5887)
+          [nocrux]: (test) starting "/home/niklas/Desktop/daemon.sh"
+          [nocrux]: (test) started. (pid: 3203)
           $ nocrux status all
-          -  [test] started
+          [nocrux]: (test) started
           $ nocrux tail test
-          This is from my-daemon.sh
-          ^C
-          $ nocrux stop all
-          -  [test] stopped
+          daemon.sh started
+          [nocrux]: (test) terminated. exit code: -15
+          daemon.sh started
+          [nocrux]: (test) terminated. exit code: -15
+          daemon.sh started
+          [nocrux]: (test) terminated. exit code: -15
+          daemon.sh started
+          daemon.sh ended
+          [nocrux]: (test) terminated. exit code: 0
+          daemon.sh started
+          ^C$ nocrux stop all
+          [nocrux]: (test) stopping... done
       '''))
   parser.add_argument(
     'command',

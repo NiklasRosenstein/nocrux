@@ -34,15 +34,23 @@ register_daemon(
 The daemon can then be controlled by the `nocrux` command.
 
     $ nocrux start test
-    -  [test] running test
-    -  [test] started (PID: 5887)
+    [nocrux]: (test) starting "/home/niklas/Desktop/daemon.sh"
+    [nocrux]: (test) started. (pid: 3203)
     $ nocrux status all
-    -  [test] started
+    [nocrux]: (test) started
     $ nocrux tail test
-    This is from my-daemon.sh
-    ^C
-    $ nocrux stop all
-    -  [test] stopped
+    daemon.sh started
+    [nocrux]: (test) terminated. exit code: -15
+    daemon.sh started
+    [nocrux]: (test) terminated. exit code: -15
+    daemon.sh started
+    [nocrux]: (test) terminated. exit code: -15
+    daemon.sh started
+    daemon.sh ended
+    [nocrux]: (test) terminated. exit code: 0
+    daemon.sh started
+    ^C$ nocrux stop all
+    [nocrux]: (test) stopping... done
 
 ```
 positional arguments:
@@ -89,6 +97,12 @@ Show the latest output of the daemon process
     $ nocrux tail gogs
 
 __CHANGELOG__
+
+*v1.1.1*
+
+* fix #17: PID file not deleted after daemon stopped
+* update output of command-line program
+* process exit code is now printed to daemon standard error output file
 
 *v1.1.0*
 
