@@ -4,7 +4,7 @@ __NAME__
 
 __SYNOPSIS__
 
-    nocrux [-h] [-e] {start,stop,restart,status,version,tail}
+    nocrux [-h] [-e] {version,start,stop,restart,status,fn:out,fn:err,fn:pid}
            [daemon [daemon ...]]
 
 __DESCRIPTION__
@@ -54,7 +54,7 @@ The daemon can then be controlled by the `nocrux` command.
 
 ```
 positional arguments:
-  {start,stop,restart,status,version,tail}
+  {version,start,stop,restart,status,fn:out,fn:err,fn:pid}
   daemon                name of one or more daemons to interact with. the
                         special name'all' can be used to refer to all
                         registered daemons
@@ -94,7 +94,7 @@ Run the daemon on startup
 
 Show the latest output of the daemon process
 
-    $ nocrux tail gogs
+    $ tail -f $(nocrux fn:out gogs)
 
 __CHANGELOG__
 
