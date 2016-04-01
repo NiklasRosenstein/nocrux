@@ -100,7 +100,9 @@ __CHANGELOG__
 
 *v1.1.1*
 
+* close #18: Automatically expand prog ~ before starting process
 * fix #17: PID file not deleted after daemon stopped
+* close #16: Tail command is counter intuitive
 * update output of command-line program
 * process exit code is now printed to daemon standard error output file
 

@@ -218,7 +218,7 @@ class Daemon(object):
 
     # Print the command before updating the in/out/err file handles
     # so the caller of nocrux can still read it.
-    command = [self.prog] + self.args
+    command = [os.path.expanduser(self.prog)] + self.args
     self.log('starting', '"' + ' '.join(map(shlex.quote, command)) + '"')
 
     # Replace the standard file handles and execute the daemon process.
@@ -363,7 +363,8 @@ def main():
       '''))
   parser.add_argument(
     'command',
-    choices=['start', 'stop', 'restart', 'status', 'version', 'tail'])
+    choices=['version', 'start', 'stop', 'restart',
+             'status', 'fn:out', 'fn:err', 'fn:pid'])
   parser.add_argument(
     'daemons',
     metavar='daemon',
@@ -418,23 +419,22 @@ def main():
       if not daemon.start():
         return 1
     return 0
-  elif args.command == 'tail':
+  elif args.command in ('fn:out', 'fn:err', 'fn:pid'):
     if len(target_daemons) != 1 or args.daemons == ['all']:
-      parser.error('can only select one daemon for "tail" command')
+      parser.error('command "{0}": only one daemon name expected'.format(args.command))
     daemon = target_daemons[0]
-    if args.stderr:
-      if not daemon.stderr:
-        daemon.log('no stderr')
-        return 1
-      fn = daemon.stderr
+    if args.command == 'fn:out':
+      if daemon.stdout:
+        print(daemon.stdout)
+    elif args.command == 'fn:err':
+      if daemon.stderr:
+        print(daemon.stderr)
+      elif daemon.stdout:
+        print(daemon.stdout)
+    elif args.command == 'fn:pid':
+      print(daemon.pidfile)
     else:
-      if not daemon.stdout:
-        daemon.log('no stdout')
-        return 1
-      fn = daemon.stdout
-    try:
-      return subprocess.call(['tail', '-f', fn])
-    except KeyboardInterrupt:
-      return 0
+      assert False
+    return 0
 
   parser.error('unknown command {!r}'.format(args.command))
