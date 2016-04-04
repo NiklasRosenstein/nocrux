@@ -404,8 +404,7 @@ def main():
     return 0
   elif args.command == 'stop':
     for daemon in target_daemons:
-      if not daemon.stop():
-        return 1
+      daemon.stop()
     return 0
   elif args.command == 'start':
     for daemon in target_daemons:

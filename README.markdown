@@ -105,6 +105,7 @@ __CHANGELOG__
 * close #16: Tail command is counter intuitive
 * update output of command-line program
 * process exit code is now printed to daemon standard error output file
+* fixed stopping multiple daemons when one wasn't running
 
 *v1.1.0*
 
