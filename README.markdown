@@ -28,6 +28,7 @@ register_daemon(
   stdout = None, # stdout file, defaults to ${root_dir}/${name}.out
   stderr = None, # stderr file, defaults to stdout
   pidfile = None,# pid file, defaults to ${root_dir}/${name}.pid
+  requires = [], # default, list of daemon names that need to run before this
 )
 ```
 
@@ -106,6 +107,7 @@ __CHANGELOG__
 * update output of command-line program
 * process exit code is now printed to daemon standard error output file
 * fixed stopping multiple daemons when one wasn't running
+* implement #10: daemon dependencies
 
 *v1.1.0*
 

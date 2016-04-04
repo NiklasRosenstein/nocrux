@@ -19,7 +19,7 @@
 # THE SOFTWARE.
 
 __author__ = 'Niklas Rosenstein <rosensteinniklas@gmail.com>'
-__version__ = '1.1.1-dev'
+__version__ = '1.1.1'
 
 import argparse
 import errno
@@ -85,11 +85,17 @@ class Daemon(object):
 
   def __init__(
       self, name, prog, args=(), cwd=None, user=None, group=None,
-      stdin=None, stdout=None, stderr=None, pidfile=None):
+      stdin=None, stdout=None, stderr=None, pidfile=None,
+      requires=None):
     if not pidfile:
       pidfile = abspath(name + '.pid')
     if stdout is None:
       stdout = abspath(name + '.out')
+
+    if not requires:
+      requires = []
+    if name in requires:
+      raise ValueError('daemon can not require itself')
 
     self._log_newline = True
     self.name = name
@@ -102,6 +108,7 @@ class Daemon(object):
     self.stdout = stdout
     self.stderr = stderr
     self.pidfile = pidfile
+    self.requires = requires
 
   def __repr__(self):
     return '<Daemon {!r}: {}>'.format(self.name, self.status)
@@ -154,6 +161,16 @@ class Daemon(object):
     if self.status == self.Status_Started:
       self.log('daemon already started')
       return True
+
+    # Make sure all dependent daemons are running as well.
+    if self.requires:
+      self.log('checking requirements ...')
+    for name in self.requires:
+      if name not in daemons:
+        self.log('* "{0}" does not exist')
+        return False
+      daemon = daemons[name]
+      daemon.start()
 
     # Get the user and group information if any.
     home, uid, gid = None, None, None
@@ -337,6 +354,7 @@ def main():
         stdout = None, # stdout file, defaults to ${root_dir}/${name}.out
         stderr = None, # stderr file, defaults to stdout
         pidfile = None,# pid file, defaults to ${root_dir}/${name}.pid
+        requires = [], # default, list of daemon names that need to run before this
       )
       ```
 
