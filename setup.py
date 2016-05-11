@@ -30,7 +30,7 @@ with open('README.rst', encoding='utf8') as fp:
 
 setup(
   name='nocrux',
-  version='1.1.1',
+  version='1.1.2',
   description='painless per-user daemon manager',
   long_description=long_description,
   author='Niklas Rosenstein',
