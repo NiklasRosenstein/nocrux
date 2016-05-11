@@ -19,7 +19,7 @@
 # THE SOFTWARE.
 
 __author__ = 'Niklas Rosenstein <rosensteinniklas@gmail.com>'
-__version__ = '1.1.2'
+__version__ = '1.1.3'
 
 import argparse
 import errno
@@ -333,52 +333,10 @@ def load_config(filename):
 def main():
   parser = argparse.ArgumentParser(
     prog='nocrux',
-    formatter_class=argparse.RawDescriptionHelpFormatter,
-    description=textwrap.dedent('''
-      nocrux is a painless per-user daemon manager. Every user can
-      configure daemons in the `~/nocrux_config.py` file using the
-      `register_daemon()` function. An example configuration file
-      may look like this:
-
-      ```python
-      root_dir = expanduser('~/.nocrux')  # default
-      kill_timeout = 10  # default
-      register_daemon(
-        name = 'test',
-        prog = expanduser('~/Desktop/my-daemon.sh'),
-        args = [],     # default
-        cwd  = '~',    # default, automatically expanded after setting user ID
-        user = None,   # name of the user, defaults to current user
-        group = None,  # name of the group, defaults to current user group
-        stdin = None,  # stdin file, defaults to /dev/null
-        stdout = None, # stdout file, defaults to ${root_dir}/${name}.out
-        stderr = None, # stderr file, defaults to stdout
-        pidfile = None,# pid file, defaults to ${root_dir}/${name}.pid
-        requires = [], # default, list of daemon names that need to run before this
-      )
-      ```
-
-      The daemon can then be controlled by the `nocrux` command.
-
-          $ nocrux start test
-          [nocrux]: (test) starting "/home/niklas/Desktop/daemon.sh"
-          [nocrux]: (test) started. (pid: 3203)
-          $ nocrux status all
-          [nocrux]: (test) started
-          $ nocrux tail test
-          daemon.sh started
-          [nocrux]: (test) terminated. exit code: -15
-          daemon.sh started
-          [nocrux]: (test) terminated. exit code: -15
-          daemon.sh started
-          [nocrux]: (test) terminated. exit code: -15
-          daemon.sh started
-          daemon.sh ended
-          [nocrux]: (test) terminated. exit code: 0
-          daemon.sh started
-          ^C$ nocrux stop all
-          [nocrux]: (test) stopping... done
-      '''))
+    description="""
+      painless per-user daemon manager.
+      https://github.com/NiklasRosenstein/nocrux
+      """)
   parser.add_argument(
     'command',
     choices=['version', 'start', 'stop', 'restart',
@@ -388,12 +346,8 @@ def main():
     metavar='daemon',
     nargs='*',
     default=[],
-    help="name of one or more daemons to interact with. the special name"
-         "'all' can be used to refer to all registered daemons")
-  parser.add_argument(
-    '-e', '--stderr',
-    action='store_true',
-    help="display stderr rather than stdout. only used for the 'tail' command")
+    help="name of one or more daemons to interact with. Use 'all' to refer "
+         "to all registered daemons")
   args = parser.parse_args()
 
   if args.command == 'version':

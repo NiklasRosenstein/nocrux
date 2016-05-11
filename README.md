@@ -28,28 +28,28 @@ register_daemon(
 
 __COMMANDLINE INTERFACE__
 
-    usage: nocrux [-h] [-e] {version,start,stop,restart,status,fn:out,fn:err,fn:pid}
+    usage: nocrux [-h]
+                  {version,start,stop,restart,status,fn:out,fn:err,fn:pid}
                   [daemon [daemon ...]]
+
+    painless per-user daemon manager. https://github.com/NiklasRosenstein/nocrux
 
     positional arguments:
       {version,start,stop,restart,status,fn:out,fn:err,fn:pid}
-      daemon                name of one or more daemons to interact with. the
-                            special name'all' can be used to refer to all
-                            registered daemons
+      daemon                name of one or more daemons to interact with. Use
+                            'all' to refer to all registered daemons
 
     optional arguments:
       -h, --help            show this help message and exit
-      -e, --stderr          display stderr rather than stdout. only used for the
-                            'tail' command
 
-Example:
+__EXAMPLE USAGE__
 
-    $ nocrux start test
+    niklas@sunbird ~$ nocrux start test
     [nocrux]: (test) starting "/home/niklas/Desktop/daemon.sh"
     [nocrux]: (test) started. (pid: 3203)
-    $ nocrux status all
+    niklas@sunbird ~$ nocrux status all
     [nocrux]: (test) started
-    $ nocrux tail test
+    niklas@sunbird ~$ tail $(nocrux fn:out test)
     daemon.sh started
     [nocrux]: (test) terminated. exit code: -15
     daemon.sh started
@@ -60,7 +60,7 @@ Example:
     daemon.sh ended
     [nocrux]: (test) terminated. exit code: 0
     daemon.sh started
-    ^C$ nocrux stop all
+    ^Cniklas@sunbird ~$ nocrux stop all
     [nocrux]: (test) stopping... done
 
 __INSTALLATION__
@@ -75,7 +75,13 @@ __REQUIREMENTS__
 
 __CHANGELOG__
 
-v1.1.2 (unreleased)
+v1.1.3
+
+* update `README.md` (corrected example and command-line interface)
+* remove unusued `-e, --stderr` argument
+* fix `setup.py` (use `py_modules` instead of the invalid `modules` parameter)
+
+v1.1.2
 
 * add `setup.py` installation script, remove `nocrux` script
 * update `README.md` and renamed from `README.markdown`

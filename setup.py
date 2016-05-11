@@ -30,13 +30,13 @@ with open('README.rst', encoding='utf8') as fp:
 
 setup(
   name='nocrux',
-  version='1.1.2',
+  version='1.1.3',
   description='painless per-user daemon manager',
   long_description=long_description,
   author='Niklas Rosenstein',
   author_email='rosensteinniklas@gmail.com',
   url='https://github.com/NiklasRosenstein/nocrux',
-  modules=['nocrux'],
+  py_modules=['nocrux'],
   entry_points=dict(
     console_scripts=[
       'nocrux=nocrux:main'
