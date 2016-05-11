@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-#
 # Copyright (c) 2016  Niklas Rosenstein
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -20,7 +18,28 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-import nocrux, sys
+from setuptools import setup
+from os import system, path
+from codecs import open
 
-if __name__ == '__main__':
-  sys.exit(nocrux.main())
+if path.isfile('README.md'):
+  assert 0 == system('pandoc -s README.md -o README.rst')
+
+with open('README.rst', encoding='utf8') as fp:
+  long_description = fp.read()
+
+setup(
+  name='nocrux',
+  version='1.1.1',
+  description='painless per-user daemon manager',
+  long_description=long_description,
+  author='Niklas Rosenstein',
+  author_email='rosensteinniklas@gmail.com',
+  url='https://github.com/NiklasRosenstein/nocrux',
+  modules=['nocrux'],
+  entry_points=dict(
+    console_scripts=[
+      'nocrux=nocrux:main'
+    ]
+  ),
+)
