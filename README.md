@@ -1,12 +1,23 @@
-nocrux is a painless per-user daemon manager that is easily configured
+# nocrux
+
+*nocrux* is a painless per-user daemon manager that is easily configured
 with a Python 3 script in the users home directory. It supports many of the
 common settings to start daemon processes such as redirecting stdout/stderr,
-pidfiles (required), additional arguments, process current working directory
-and more.
+pidfiles (required), additional arguments, current working directory and more.
 
-__EXAMPLE CONFIGURATION__
+## Installation
 
-The configuration file for nocrux must be in `~/nocrux_config.py`.
+The *nocrux* daemon manager is available via Pip. Python 3 is required. It has
+been tested on Ubuntu 15.05 and macOS Sierra.
+
+    $ pip3 install nocrux
+
+> **Note**: Installing from the Git repository requires Pandoc.
+
+## Configuration
+
+The configuration file for *nocrux* is `~/nocrux_config.py`. Below is a sample
+configuration that highlights the available options and their default values.
 
 ```python
 root_dir = expanduser('~/.nocrux')  # default
@@ -26,26 +37,43 @@ register_daemon(
 )
 ```
 
-__COMMANDLINE INTERFACE__
+## Command-line Interface
 
-```
-usage: nocrux [-h]
-              daemon
-              {version,start,stop,restart,status,fn:out,fn:err,fn:pid,pid,tail,tail:out,tail:err}
+    nocrux [daemon(s)] command
 
-painless per-user daemon manager. https://github.com/NiklasRosenstein/nocrux
+The following commands expect no daemon(s) on the command-line.
 
-positional arguments:
-  daemon                name of one or more daemons to interact with. Use
-                        'all' to refer to all registered daemons. Can be
-                        comma-separated to list multiple daemons.
-  {version,start,stop,restart,status,fn:out,fn:err,fn:pid,pid,tail,tail:out,tail:err}
+- `version` -- Print the version of *nocrux* and exit
 
-optional arguments:
-  -h, --help            show this help message and exit
-```
+The following commands expect one or more daemons be specified on the command-line.
 
-__EXAMPLE USAGE__
+- `start` -- Start the daemon(s)
+- `stop` -- Stop the daemon(s)
+- `restart` -- Restart the daemon(s)
+- `status` -- Show the status of the daemon(s)
+
+The following commands expect exactly one daemon be specified on the command-line.
+
+- `tail`-- Alias for `tail:out`
+- `tail:out` -- Shows the tail of the daemons' stdout
+- `tail:err` -- Shows the tail of the daemons' stderr
+- `pid` -- Print the PID of the daemon (0 if the daemon is not running)
+- `fn:out` -- Prints the path to the stdout file
+- `fn:err` -- Prints the path to the stderr file
+- `fn:pid` -- Prints the path to the PID file
+
+## Daemon termination
+
+*nocrux* can only send SIGTERM (and alternatively SIGKILL if the process doesn't response
+to the previous signal) to the main process that was also started with *nocrux*. If that
+process spawns any subprocess, it must take care of forwarding the signals to the child
+processes.
+
+The thread [Forward SIGTERM to child in Bash](http://unix.stackexchange.com/q/146756/73728)
+contains some information on doing that for Bash scripts. For very simple scripts that just
+set up an environment, I reccomend the `exec` approach.
+
+## Example
 
     niklas@sunbird ~$ nocrux test start
     [nocrux]: (test) starting "/home/niklas/Desktop/daemon.sh"
@@ -66,25 +94,7 @@ __EXAMPLE USAGE__
     ^Cniklas@sunbird ~$ nocrux all stop
     [nocrux]: (test) stopping... done
 
-> **Note**: In the example above, we use a shell-script to start an example daemon.
-> If that shell script invokes other processes, it must make sure to forward SIGTERM
-> to these processes. A common method is to use `exec command args...` as it will
-> effectively replace the shell of the script with the new processes shell and
-> automatically receive signals.
->
-> See http://unix.stackexchange.com/q/146756/73728 for more information.
-
-__INSTALLATION__
-
-    pip install nocrux
-
-__REQUIREMENTS__
-
-* Python 3
-* Unix-like operating system (tested on Ubuntu 15.05, Mac OS X El Capitan)
-* Pandoc when installing from the Git repository (not required for Pip installation)
-
-__CHANGELOG__
+## Changelog
 
 v2.0.0
 
