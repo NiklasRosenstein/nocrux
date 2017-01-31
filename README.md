@@ -28,19 +28,21 @@ register_daemon(
 
 __COMMANDLINE INTERFACE__
 
-    usage: nocrux [-h]
-                  {version,start,stop,restart,status,fn:out,fn:err,fn:pid}
-                  [daemon [daemon ...]]
+```
+usage: nocrux [-h]
+              {version,start,stop,restart,status,fn:out,fn:err,fn:pid,pid,tail,tail:out,tail:err}
+              [daemon [daemon ...]]
 
-    painless per-user daemon manager. https://github.com/NiklasRosenstein/nocrux
+painless per-user daemon manager. https://github.com/NiklasRosenstein/nocrux
 
-    positional arguments:
-      {version,start,stop,restart,status,fn:out,fn:err,fn:pid}
-      daemon                name of one or more daemons to interact with. Use
-                            'all' to refer to all registered daemons
+positional arguments:
+  {version,start,stop,restart,status,fn:out,fn:err,fn:pid,pid,tail,tail:out,tail:err}
+  daemon                name of one or more daemons to interact with. Use
+                        'all' to refer to all registered daemons
 
-    optional arguments:
-      -h, --help            show this help message and exit
+optional arguments:
+  -h, --help            show this help message and exit
+```
 
 __EXAMPLE USAGE__
 
@@ -49,7 +51,7 @@ __EXAMPLE USAGE__
     [nocrux]: (test) started. (pid: 3203)
     niklas@sunbird ~$ nocrux status all
     [nocrux]: (test) started
-    niklas@sunbird ~$ tail $(nocrux fn:out test)
+    niklas@sunbird ~$ nocrux tail test
     daemon.sh started
     [nocrux]: (test) terminated. exit code: -15
     daemon.sh started
@@ -89,6 +91,7 @@ v1.1.3
 * remove unusued `-e, --stderr` argument
 * fix `setup.py` (use `py_modules` instead of the invalid `modules` parameter)
 * enable running `nocrux.py` directly without prior installation
+* add `pid`, `tail`, `tail:out` and `tail:err` subcommands
 
 v1.1.2
 

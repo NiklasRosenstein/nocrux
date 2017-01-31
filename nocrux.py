@@ -339,8 +339,8 @@ def main():
       """)
   parser.add_argument(
     'command',
-    choices=['version', 'start', 'stop', 'restart',
-             'status', 'fn:out', 'fn:err', 'fn:pid'])
+    choices=['version', 'start', 'stop', 'restart', 'status',
+             'fn:out', 'fn:err', 'fn:pid', 'pid', 'tail', 'tail:out', 'tail:err'])
   parser.add_argument(
     'daemons',
     metavar='daemon',
@@ -390,7 +390,7 @@ def main():
       if not daemon.start():
         return 1
     return 0
-  elif args.command in ('fn:out', 'fn:err', 'fn:pid'):
+  elif args.command in ('fn:out', 'fn:err', 'fn:pid', 'pid', 'tail', 'tail:out', 'tail:err'):
     if len(target_daemons) != 1 or args.daemons == ['all']:
       parser.error('command "{0}": only one daemon name expected'.format(args.command))
     daemon = target_daemons[0]
@@ -404,6 +404,14 @@ def main():
         print(daemon.stdout)
     elif args.command == 'fn:pid':
       print(daemon.pidfile)
+    elif args.command in ('tail', 'tail:out'):
+      if daemon.stdout:
+        subprocess.call(['tail', '-f', daemon.stdout])
+    elif args.command == 'tail:err':
+      if daemon.stderr:
+        subprocess.call(['tail', '-f', daemon.stderr])
+    elif args.command == 'pid':
+      print(daemon.pid)
     else:
       assert False
     return 0
