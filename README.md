@@ -63,6 +63,14 @@ __EXAMPLE USAGE__
     ^Cniklas@sunbird ~$ nocrux stop all
     [nocrux]: (test) stopping... done
 
+> **Note**: In the example above, we use a shell-script to start an example daemon.
+> If that shell script invokes other processes, it must make sure to forward SIGTERM
+> to these processes. A common method is to use `exec command args...` as it will
+> effectively replace the shell of the script with the new processes shell and
+> automatically receive signals.
+>
+> See http://unix.stackexchange.com/q/146756/73728 for more information.
+
 __INSTALLATION__
 
     pip install nocrux
