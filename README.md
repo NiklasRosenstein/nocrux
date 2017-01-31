@@ -30,15 +30,16 @@ __COMMANDLINE INTERFACE__
 
 ```
 usage: nocrux [-h]
+              daemon
               {version,start,stop,restart,status,fn:out,fn:err,fn:pid,pid,tail,tail:out,tail:err}
-              [daemon [daemon ...]]
 
 painless per-user daemon manager. https://github.com/NiklasRosenstein/nocrux
 
 positional arguments:
-  {version,start,stop,restart,status,fn:out,fn:err,fn:pid,pid,tail,tail:out,tail:err}
   daemon                name of one or more daemons to interact with. Use
-                        'all' to refer to all registered daemons
+                        'all' to refer to all registered daemons. Can be
+                        comma-separated to list multiple daemons.
+  {version,start,stop,restart,status,fn:out,fn:err,fn:pid,pid,tail,tail:out,tail:err}
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -46,12 +47,12 @@ optional arguments:
 
 __EXAMPLE USAGE__
 
-    niklas@sunbird ~$ nocrux start test
+    niklas@sunbird ~$ nocrux test start
     [nocrux]: (test) starting "/home/niklas/Desktop/daemon.sh"
     [nocrux]: (test) started. (pid: 3203)
-    niklas@sunbird ~$ nocrux status all
+    niklas@sunbird ~$ nocrux all status
     [nocrux]: (test) started
-    niklas@sunbird ~$ nocrux tail test
+    niklas@sunbird ~$ nocrux test tail
     daemon.sh started
     [nocrux]: (test) terminated. exit code: -15
     daemon.sh started
@@ -62,7 +63,7 @@ __EXAMPLE USAGE__
     daemon.sh ended
     [nocrux]: (test) terminated. exit code: 0
     daemon.sh started
-    ^Cniklas@sunbird ~$ nocrux stop all
+    ^Cniklas@sunbird ~$ nocrux all stop
     [nocrux]: (test) stopping... done
 
 > **Note**: In the example above, we use a shell-script to start an example daemon.
@@ -84,6 +85,12 @@ __REQUIREMENTS__
 * Pandoc when installing from the Git repository (not required for Pip installation)
 
 __CHANGELOG__
+
+v2.0.0
+
+* cli is now `nocrux <daemon> <command>` (switched)
+* to specify multiple daemons, the `<daemon>` argument can be a list of
+  comma separated daemon names
 
 v1.1.3
 

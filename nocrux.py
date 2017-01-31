@@ -338,21 +338,22 @@ def main():
       https://github.com/NiklasRosenstein/nocrux
       """)
   parser.add_argument(
+    'daemon',
+    default=[],
+    help="name of one or more daemons to interact with. Use 'all' to refer "
+         "to all registered daemons. Can be comma-separated to list multiple "
+         "daemons.")
+  parser.add_argument(
     'command',
     choices=['version', 'start', 'stop', 'restart', 'status',
              'fn:out', 'fn:err', 'fn:pid', 'pid', 'tail', 'tail:out', 'tail:err'])
-  parser.add_argument(
-    'daemons',
-    metavar='daemon',
-    nargs='*',
-    default=[],
-    help="name of one or more daemons to interact with. Use 'all' to refer "
-         "to all registered daemons")
   args = parser.parse_args()
 
   if args.command == 'version':
     print('nocrux v{}'.format(__version__))
     return 0
+
+  args.daemons = args.daemon.strip(',').split(',')
   if not args.daemons:
     parser.error('need at least one argument for "daemons"')
 
