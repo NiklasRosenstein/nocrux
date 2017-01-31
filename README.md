@@ -80,6 +80,7 @@ v1.1.3
 * update `README.md` (corrected example and command-line interface)
 * remove unusued `-e, --stderr` argument
 * fix `setup.py` (use `py_modules` instead of the invalid `modules` parameter)
+* enable running `nocrux.py` directly without prior installation
 
 v1.1.2
 

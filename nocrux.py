@@ -409,3 +409,7 @@ def main():
     return 0
 
   parser.error('unknown command {!r}'.format(args.command))
+
+
+if __name__ == '__main__':
+  sys.exit(main())
