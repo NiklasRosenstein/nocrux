@@ -18,15 +18,17 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+import sys
 from setuptools import setup
 from os import system, path
 from codecs import open
 
-if path.isfile('README.md'):
+if path.isfile('README.md') and 'dist' in sys.argv:
   assert 0 == system('pandoc -s README.md -o README.rst')
-
-with open('README.rst', encoding='utf8') as fp:
-  long_description = fp.read()
+  with open('README.rst', encoding='utf8') as fp:
+    long_description = fp.read()
+else:
+  long_description = None
 
 setup(
   name='nocrux',
