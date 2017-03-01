@@ -32,7 +32,7 @@ else:
 
 setup(
   name='nocrux',
-  version='1.1.3',
+  version='1.1.4',
   description='painless per-user daemon manager',
   long_description=long_description,
   author='Niklas Rosenstein',
