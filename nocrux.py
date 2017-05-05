@@ -429,6 +429,7 @@ def main():
   config_file = os.path.expanduser('~/.nocrux/conf')
   if not os.path.isfile(config_file):
     config_file = '/etc/nocrux/conf'
+    config['root'] = '/var/run/nocrux'
     if not os.path.isfile(config_file):
       print("Error: file '~/.nocrux/conf' or '/etc/nocrux/conf' does not exist")
       return 1
