@@ -1,4 +1,4 @@
-# Copyright (c) 2016  Niklas Rosenstein
+# Copyright (c) 2017  Niklas Rosenstein
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -19,39 +19,42 @@
 # THE SOFTWARE.
 
 __author__ = 'Niklas Rosenstein <rosensteinniklas@gmail.com>'
-__version__ = '1.1.4'
+__version__ = '2.0.0'
 
 import argparse
 import errno
 import os
+import pyparsing as pp
 import pwd, grp
 import runpy
 import shlex
 import signal
+import string
 import subprocess
 import sys
 import textwrap
 import time
 import types
 
-# The configuration module object that is imported later.
-config = None
-
-# A dictionary of all daemons registered with #register_daemon().
+config = {
+  'root': os.path.expanduser('~/.nocrux/run'),
+  'kill_timeout': 10
+}
 daemons = {}
 
 
 def abspath(path):
   ''' Make *path* absolute if it not already is. Relative paths
-  are assumed relative to the ``config.root_dir`` configuration
+  are assumed relative to the ``config['root']`` configuration
   parameter.
 
   .. note:: This function can not be used before the :data:`config`
     is loaded.
   '''
 
+  path = os.path.expanduser(path)
   if not os.path.isabs(path):
-    return os.path.abspath(os.path.join(config.root_dir, path))
+    return os.path.abspath(os.path.join(config['root'], path))
   return path
 
 
@@ -77,8 +80,7 @@ def process_exists(pid):
 
 
 class Daemon(object):
-  ''' Configuration for a daemon process. See ``nocrux_config.py``
-  for an explanation of the parameters. '''
+  ''' Configuration for a daemon process. '''
 
   Status_Started = 'started'
   Status_Stopped = 'stopped'
@@ -278,7 +280,7 @@ class Daemon(object):
     else:
       self.log('stopping...', end=' ')
       tstart = time.time()
-      while time.time() - tstart < config.kill_timeout and process_exists(pid):
+      while time.time() - tstart < config['kill_timeout'] and process_exists(pid):
         time.sleep(0.5)
       if process_exists(pid):
         self.log('failed')
@@ -293,48 +295,100 @@ class Daemon(object):
         self.log('done')
 
 
-def register_daemon(**kwargs):
-  ''' Register a daemon to nocrux. The arguments are the same as for
-  the :class:`Daemon` class, though only keyword-arguments are accepted. '''
+class ConfigParser(object):
 
-  daemon = Daemon(**kwargs)
-  if daemon.name in daemons:
-    raise ValueError('daemon name {!r} already in use'.format(daemon))
-  daemons[daemon.name] = daemon
+  left_bracket = pp.Literal('{').suppress()
+  right_bracket = pp.Literal('}').suppress()
+  semicolon = pp.Literal(';').suppress()
+  space = pp.White().suppress()
+  key = pp.Word(string.ascii_letters + '_/')
+  value = pp.CharsNotIn('{};')
+  assignment = pp.Group(key + space + value + semicolon)
+
+  subblock = pp.Forward()
+  block = pp.Forward()
+
+  subblock << pp.ZeroOrMore(block | assignment)
+  block << pp.Group(
+    pp.Group(key + pp.Optional(space + value))
+    + left_bracket
+    + subblock
+    + right_bracket
+  )
+
+  all = pp.OneOrMore(block | assignment).ignore(pp.pythonStyleComment)
+
+  @staticmethod
+  def parse(source):
+    # TODO: Have pyparsing raise an exception if not all of the input
+    # is consumed during the parsing.
+    return ConfigParser.all.parseString(source)
 
 
 def load_config(filename):
-  ''' Load the nocrux configuration from *filename*. This effectively
-  executes *filename* and returns a Python module object. '''
+  ''' Load the nocrux configuration from *filename*. '''
 
-  module = types.ModuleType('nocrux_config')
-  module.__file__ = filename
-  module.join = os.path.join
-  module.split = os.path.split
-  module.expanduser = os.path.expanduser
-  module.register_daemon = register_daemon
+  with open(filename) as fp:
+    data = ConfigParser.parse(fp.read())
 
-  # Initialize default values for configuration parameters before
-  # executing the configure script.
-  module.root_dir = os.path.expanduser('~/.nocrux')
-  module.kill_timeout = 10
-
-  global config
-  config = module
-
-  try:
-    with open(filename) as fp:
-      exec(fp.read(), vars(module))
-  except:
-    config = None
-    raise
+  for item in data:
+    if isinstance(item[0], str):
+      if item[0] == 'root':
+        config['root'] = item[1].strip()
+        if not os.path.isabs(config['root']):
+          raise ValueError('root must be an absolute path')
+      elif item[0] == 'kill_timeout':
+        config['kill_timeout'] = int(item[1].strip())
+      else:
+        raise ValueError('invalid configuration key: {}'.format(item[0]))
+    else:
+      if item[0][0] != 'daemon':
+        raise ValueError('invalid block: {}'.format(item[0][0]))
+      name = item[0][1].strip()
+      params = {'name': name}
+      for item in item[1:]:
+        if isinstance(item[0], str):
+          if item[0] == 'run':
+            args = shlex.split(item[1])
+            if len(args) < 1:
+              raise ValueError('daemon {}: empty run key'.format(name))
+            params['prog'] = args[0]
+            params['args'] = args[1:]
+          elif item[0] == 'cwd':
+            params['cwd'] = item[1].strip()
+          elif item[0] == 'export':
+            key, sep, value = item[1].strip().partition('=')
+            if not sep:
+              raise ValueError('daemon {}: invalid export key'.format(name))
+            params.setdefault('env', {})[key] = value
+          elif item[0] in ('user', 'group'):
+            params[item[0]] = item[1].strip()
+          elif item[0] in ('stdin', 'stdout', 'stderr', 'pidfile'):
+            if item[0] == 'stderr' and item[1].strip() == '$stdout':
+              item[1] = None
+            if item[1]:
+              item[1] = string.Template(item[1]).safe_substitute(name=name, root=config['root'])
+            params[item[0]] = item[1]
+          elif item[0] == 'requires':
+            items = item[1].strip().split(' ')
+            if not items:
+              raise ValueError('daemon {}: invalid requires key'.format(name))
+            params['requires'] = items
+          else:
+            raise ValueError('daemon {}: invalid key: {}'.format(name, item))
+        else:
+          raise ValueError('daemon {}: unexpected block {}'.format(name, item[0][0]))
+      if name in daemons:
+        raise ValueError('daemon {} already defined'.format(name))
+      daemons[name] = Daemon(**params)
+  return
 
 
 def main():
   parser = argparse.ArgumentParser(
     prog='nocrux',
     description="""
-      painless per-user daemon manager.
+      a painless per-user daemon manager.
       https://github.com/NiklasRosenstein/nocrux
       """)
   parser.add_argument(
@@ -346,7 +400,7 @@ def main():
   parser.add_argument(
     'command',
     choices=['version', 'start', 'stop', 'restart', 'status',
-             'fn:out', 'fn:err', 'fn:pid', 'pid', 'tail', 'tail:out', 'tail:err'])
+             'pid', 'tail', 'tail:out', 'tail:err'])
   args = parser.parse_args()
 
   if args.command == 'version':
@@ -358,9 +412,12 @@ def main():
     parser.error('need at least one argument for "daemons"')
 
   # Load the nocrux configuration file.
-  config_file = os.path.expanduser('~/nocrux_config.py')
+  config_file = os.path.expanduser('~/.nocrux/conf')
   if not os.path.isfile(config_file):
-    parser.error('"{0}" does not exist'.format(config_file))
+    config_file = '/etc/nocrux/conf'
+    if not os.path.isfile(config_file):
+      print("Error: file '~/.nocrux/conf' or '/etc/nocrux/conf' does not exist")
+      return 1
   load_config(config_file)
 
   if args.daemons == ['all']:
@@ -395,22 +452,18 @@ def main():
     if len(target_daemons) != 1 or args.daemons == ['all']:
       parser.error('command "{0}": only one daemon name expected'.format(args.command))
     daemon = target_daemons[0]
-    if args.command == 'fn:out':
+    if args.command in ('tail', 'tail:out'):
       if daemon.stdout:
-        print(daemon.stdout)
-    elif args.command == 'fn:err':
-      if daemon.stderr:
-        print(daemon.stderr)
-      elif daemon.stdout:
-        print(daemon.stdout)
-    elif args.command == 'fn:pid':
-      print(daemon.pidfile)
-    elif args.command in ('tail', 'tail:out'):
-      if daemon.stdout:
-        subprocess.call(['tail', '-f', daemon.stdout])
+        try:
+          subprocess.call(['tail', '-f', daemon.stdout])
+        except KeyboardInterrupt:
+          pass
     elif args.command == 'tail:err':
       if daemon.stderr:
-        subprocess.call(['tail', '-f', daemon.stderr])
+        try:
+          subprocess.call(['tail', '-f', daemon.stderr])
+        except KeyboardInterrupt:
+          pass
     elif args.command == 'pid':
       print(daemon.pid)
     else:
@@ -422,3 +475,10 @@ def main():
 
 if __name__ == '__main__':
   sys.exit(main())
+else:
+  try:
+    require
+  except NameError: pass
+  else:
+    if require.main == module:
+      sys.exit(main())

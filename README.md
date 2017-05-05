@@ -1,41 +1,64 @@
-# nocrux
 
-*nocrux* is a painless per-user daemon manager that is easily configured
-with a Python 3 script in the users home directory. It supports many of the
-common settings to start daemon processes such as redirecting stdout/stderr,
-pidfiles (required), additional arguments, current working directory and more.
+*nocrux* -- a painless **per-user** daemon manager.
 
 ## Installation
 
-The *nocrux* daemon manager is available via Pip. Python 3 is required. It has
-been tested on Ubuntu 15.05 and macOS Sierra.
+The *nocrux* daemon manager is available via Pip and PPYM. Minimum version
+required is Python 3.4. It has been tested on Ubuntu 15.05 and macOS Sierra.
 
+    $ ppym install nocrux  #or
     $ pip3 install nocrux
-
-> **Note**: Installing from the Git repository requires Pandoc.
 
 ## Configuration
 
-The configuration file for *nocrux* is `~/nocrux_config.py`. Below is a sample
-configuration that highlights the available options and their default values.
+The configuration file is loaded from `~/.nocrux/conf` or `/etc/nocrux/conf`
+(preferring the former over the latter). The syntax is similar to what you
+know from NGinx.
 
-```python
-root_dir = expanduser('~/.nocrux')  # default
-kill_timeout = 10  # default
-register_daemon(
-  name = 'test',
-  prog = expanduser('~/Desktop/my-daemon.sh'),
-  args = [],      # default
-  cwd  = '~',     # default, automatically expanded after setting user ID
-  user = None,    # name of the user, defaults to current user
-  group = None,   # name of the group, defaults to current user group
-  stdin = None,   # stdin file, defaults to /dev/null
-  stdout = None,  # stdout file, defaults to ${root_dir}/${name}.out
-  stderr = None,  # stderr file, defaults to stdout
-  pidfile = None, # pid file, defaults to ${root_dir}/${name}.pid
-  requires = [],  # default, list of daemon names that need to run before this
-)
-```
+    ## Directory where the default daemon files are stored. Defaults to
+    ## /var/run/nocrux if the configuration file is read from /etc/nocrux/conf,
+    ## otherwise defaults to ~/.nocrux/run .
+    #root ~/.nocrux/run;
+    
+    ## The timeout after which a process will be killed when it can not
+    ## be terminated with SIGINT.
+    #kill_timeout 10;
+
+    ## Include all files in the conf.d directory relative to the
+    ## configuration file.
+    include conf.d/*;
+
+    ## Defines a daemon.
+    daemon test {
+        run ~/Desktop/mytestdaemon.sh arg1 "arg 2";
+        cwd ~;
+        export MYTESTDAEMON_DEBUG=true;
+
+        ## The user to run start the daemon as. If omitted, the user will
+        ## not be changed.
+        #user www-data;
+
+        ## The group to run start the daemon as. If omitted, the user will
+        ## not be changed.
+        #group www-data;
+
+        ## Path to a file to input to stdin.
+        #stdin /dev/null;
+
+        ## Path to the file that will capture the daemon's stdout.
+        #stdout $root/$name.out;
+
+        ## Path to the file that will capture the daemon's stderr.
+        #stderr $stdout;
+
+        ## Path to the file that will be used to store the PID.
+        ## Do not change this value until the daemon is stopped again.
+        #pidfile $root/$name.pid;
+
+        ## Zero, one or more names of daemons that need to be started
+        ## before this daemon can be started.
+        #requires daemon1 daemon2;
+    }
 
 ## Command-line Interface
 
@@ -64,45 +87,28 @@ The following commands expect exactly one daemon be specified on the command-lin
 
 ## Daemon termination
 
-*nocrux* can only send SIGTERM (and alternatively SIGKILL if the process doesn't response
-to the previous signal) to the main process that was also started with *nocrux*. If that
-process spawns any subprocess, it must take care of forwarding the signals to the child
-processes.
+*nocrux* can only send SIGTERM (and alternatively SIGKILL if the process
+doesn't respond to the previous signal) to the main process that was also
+started with *nocrux*. If that process spawns any subprocess, it must take
+care of forwarding the signals to the child processes.
 
 The thread [Forward SIGTERM to child in Bash](http://unix.stackexchange.com/q/146756/73728)
-contains some information on doing that for Bash scripts. For very simple scripts that just
-set up an environment, I reccomend the `exec` approach.
-
-## Example
-
-    niklas@sunbird ~$ nocrux test start
-    [nocrux]: (test) starting "/home/niklas/Desktop/daemon.sh"
-    [nocrux]: (test) started. (pid: 3203)
-    niklas@sunbird ~$ nocrux all status
-    [nocrux]: (test) started
-    niklas@sunbird ~$ nocrux test tail
-    daemon.sh started
-    [nocrux]: (test) terminated. exit code: -15
-    daemon.sh started
-    [nocrux]: (test) terminated. exit code: -15
-    daemon.sh started
-    [nocrux]: (test) terminated. exit code: -15
-    daemon.sh started
-    daemon.sh ended
-    [nocrux]: (test) terminated. exit code: 0
-    daemon.sh started
-    ^Cniklas@sunbird ~$ nocrux all stop
-    [nocrux]: (test) stopping... done
+contains some information on doing that for Bash scripts. For very simple
+scripts that just set up an environment, I recommend the `exec` approach.
 
 ## Changelog
 
-v2.0.0
+__v2.0.0__
 
 * cli is now `nocrux <daemon> <command>` (switched)
 * to specify multiple daemons, the `<daemon>` argument can be a list of
   comma separated daemon names
+* configuration file is no longer a Python script
+* configuration file must now be located at `~/.nocrux/conf` or
+  `/etc/nocrux/conf`
+* nocrux can now be installed via PPYM and is compatible with Node.py
 
-v1.1.3
+__v1.1.3__
 
 * update `README.md` (corrected example and command-line interface)
 * remove unusued `-e, --stderr` argument
@@ -110,12 +116,12 @@ v1.1.3
 * enable running `nocrux.py` directly without prior installation
 * add `pid`, `tail`, `tail:out` and `tail:err` subcommands
 
-v1.1.2
+__v1.1.2__
 
 * add `setup.py` installation script, remove `nocrux` script
 * update `README.md` and renamed from `README.markdown`
 
-v1.1.1
+__v1.1.1__
 
 * close #18: Automatically expand prog ~ before starting process
 * fix #17: PID file not deleted after daemon stopped
@@ -125,12 +131,12 @@ v1.1.1
 * fixed stopping multiple daemons when one wasn't running
 * implement #10: daemon dependencies
 
-v1.1.0
+__v1.1.0__
 
 * Renamed to `nocrux`
 * Update README and command-line help description
 
-v1.0.1
+__v1.0.1__
 
 * Add `krugs tail <daemon> [-e/-stderr]` command
 * Add special deaemon name `all`

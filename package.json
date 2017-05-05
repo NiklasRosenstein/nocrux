@@ -1,0 +1,14 @@
+{
+  "name": "nocrux",
+  "version": "2.0.0",
+  "description": "a painless per-user daemon manager",
+  "author": "Niklas Rosenstein <rosensteinniklas@gmail.com>",
+  "license": "MIT",
+  "bin": {
+    "nocrux": "nocrux"
+  },
+  "dependencies": {},
+  "python-dependencies": {
+    "pyparsing": ">=2.2.0"
+  }
+}

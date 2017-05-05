@@ -1,4 +1,4 @@
-# Copyright (c) 2016  Niklas Rosenstein
+# Copyright (c) 2017  Niklas Rosenstein
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -23,22 +23,40 @@ from setuptools import setup
 from os import system, path
 from codecs import open
 
-if path.isfile('README.md') and 'dist' in sys.argv:
-  assert 0 == system('pandoc -s README.md -o README.rst')
-  with open('README.rst', encoding='utf8') as fp:
-    long_description = fp.read()
-else:
-  long_description = None
+def readme():
+  """
+  This helper function uses the `pandoc` command to convert the `README.md`
+  into a `README.rst` file, because we need the long_description in ReST
+  format. This function will only generate the `README.rst` if any of the
+  `setup dist...` commands are used, otherwise it will return an empty string
+  or return the content of the already existing `README.rst` file.
+  """
+
+  if os.path.isfile('README.md') and any('dist' in x for x in sys.argv[1:]):
+    if os.system('pandoc -s README.md -o README.rst') != 0:
+      print('-----------------------------------------------------------------')
+      print('WARNING: README.rst could not be generated, pandoc command failed')
+      print('-----------------------------------------------------------------')
+      if sys.stdout.isatty():
+        input("Enter to continue... ")
+    else:
+      print("Generated README.rst with Pandoc")
+
+  if os.path.isfile('README.rst'):
+    with open('README.rst') as fp:
+      return fp.read()
+  return ''
 
 setup(
   name='nocrux',
-  version='1.1.4',
-  description='painless per-user daemon manager',
-  long_description=long_description,
+  version='2.0.0',
+  description='a painless per-user daemon manager',
+  long_description=readme(),
   author='Niklas Rosenstein',
   author_email='rosensteinniklas@gmail.com',
   url='https://github.com/NiklasRosenstein/nocrux',
   py_modules=['nocrux'],
+  install_requires=['pyparsing>=2.2.0'],
   entry_points=dict(
     console_scripts=[
       'nocrux=nocrux:main'
