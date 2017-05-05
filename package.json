@@ -10,5 +10,8 @@
   "dependencies": {},
   "python-dependencies": {
     "pyparsing": ">=2.2.0"
+  },
+  "dist": {
+    "include_files": ["nocrux.py", "index.py", "README.md"]
   }
 }
