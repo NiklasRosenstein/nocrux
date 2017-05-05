@@ -23,6 +23,7 @@ __version__ = '2.0.0'
 
 import argparse
 import errno
+import glob
 import os
 import pyparsing as pp
 import pwd, grp
@@ -343,6 +344,15 @@ def load_config(filename):
           raise ValueError('root must be an absolute path')
       elif item[0] == 'kill_timeout':
         config['kill_timeout'] = int(item[1].strip())
+      elif item[0] == 'include':
+        path = item[1].strip()
+        if not os.path.isabs(path):
+          path = os.path.join(os.path.dirname(filename), path)
+        if '?' in path or '*' in path:
+          for fname in glob.iglob(path):
+            load_config(fname)
+        else:
+          load_config(path)
       else:
         raise ValueError('invalid configuration key: {}'.format(item[0]))
     else:
