@@ -107,6 +107,7 @@ __v2.0.0__
 * configuration file must now be located at `~/.nocrux/conf` or
   `/etc/nocrux/conf`
 * nocrux can now be installed via PPYM and is compatible with Node.py
+* add support for defining per-process environment variables
 
 __v1.1.3__
 

@@ -88,7 +88,7 @@ class Daemon(object):
   def __init__(
       self, name, prog, args=(), cwd=None, user=None, group=None,
       stdin=None, stdout=None, stderr=None, pidfile=None,
-      requires=None):
+      requires=None, env=None):
     if not pidfile:
       pidfile = abspath(name + '.pid')
     if stdout is None:
@@ -111,6 +111,7 @@ class Daemon(object):
     self.stderr = stderr
     self.pidfile = pidfile
     self.requires = requires
+    self.env = {} if env is None else env
 
   def __repr__(self):
     return '<Daemon {!r}: {}>'.format(self.name, self.status)
@@ -244,7 +245,10 @@ class Daemon(object):
     os.dup2(si.fileno(), sys.stdin.fileno())
     os.dup2(so.fileno(), sys.stdout.fileno())
     os.dup2(se.fileno(), sys.stderr.fileno())
-    process = subprocess.Popen(command)
+    env = os.environ.copy()
+    if self.env:
+      env.update(self.env)
+    process = subprocess.Popen(command, env=env)
     try:
       with open(self.pidfile, 'w') as pidf:
         pidf.write(str(process.pid))
