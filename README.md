@@ -81,9 +81,6 @@ The following commands expect exactly one daemon be specified on the command-lin
 - `tail:out` -- Shows the tail of the daemons' stdout
 - `tail:err` -- Shows the tail of the daemons' stderr
 - `pid` -- Print the PID of the daemon (0 if the daemon is not running)
-- `fn:out` -- Prints the path to the stdout file
-- `fn:err` -- Prints the path to the stderr file
-- `fn:pid` -- Prints the path to the PID file
 
 ## Daemon termination
 
@@ -97,6 +94,10 @@ contains some information on doing that for Bash scripts. For very simple
 scripts that just set up an environment, I recommend the `exec` approach.
 
 ## Changelog
+
+__v2.0.1__
+
+* removed `fn:out`, `fn:err` and `fn:pid` commands (actually already removed in 2.0.0)
 
 __v2.0.0__
 
