@@ -80,6 +80,11 @@ __v2.0.3__
 
 - support environment variable substition in the `daemon > export` field
 - rework command-line interface with Click
+- support custom signals for termination and killing a daemon process
+  (see issue #21)
+- support custom daemon subcommands that have access to the following
+  environment variables: `$DAEMON_PID, $DAEMON_PIDFILE, $DAEMON_STDOUT,
+  $DAEMON_STDERR` (see issue #22)
 
 __v2.0.2__
 
