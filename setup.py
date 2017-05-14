@@ -57,7 +57,7 @@ setup(
   author_email='rosensteinniklas@gmail.com',
   url='https://github.com/NiklasRosenstein/nocrux',
   py_modules=['nocrux'],
-  install_requires=['pyparsing>=2.2.0'],
+  install_requires=['nr>=1.4.6'],
   entry_points=dict(
     console_scripts=[
       'nocrux=nocrux:main'
