@@ -62,20 +62,21 @@ know from NGinx.
 
 ## Command-line Interface
 
-    nocrux [daemon(s)] command
+    nocrux version                 (print the version of nocrux and exit)
+    nocrux edit                    (edit the nocrux configuration file)
+    nocrux all <command>           (apply <command> on all daemons)
+    nocrux <daemon(s)> <command>   (apply <command> on the specified daemons)
 
-The following commands expect no daemon(s) on the command-line.
-
-- `version` -- Print the version of *nocrux* and exit
-
-The following commands expect one or more daemons be specified on the command-line.
+When specifying multiple daemons on the command-line, they must be a single
+argument and separated by a comma, for example `nocrux mongod,nginx,php-fpm stop`.
+Below is a list of the available commands.
 
 - `start` -- Start the daemon(s)
 - `stop` -- Stop the daemon(s)
 - `restart` -- Restart the daemon(s)
 - `status` -- Show the status of the daemon(s)
 
-The following commands expect exactly one daemon be specified on the command-line.
+Note that the following commands can only be used with a single daemon.
 
 - `tail`-- Alias for `tail:out`
 - `tail:out` -- Shows the tail of the daemons' stdout
