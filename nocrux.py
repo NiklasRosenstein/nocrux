@@ -22,10 +22,11 @@ __author__ = 'Niklas Rosenstein <rosensteinniklas@gmail.com>'
 __version__ = '2.0.0'
 
 import argparse
+import collections
 import errno
 import glob
+import nr.parse.strex as strex
 import os
-import pyparsing as pp
 import pwd, grp
 import runpy
 import shlex
@@ -302,100 +303,104 @@ class Daemon(object):
 
 class ConfigParser(object):
 
-  left_bracket = pp.Literal('{').suppress()
-  right_bracket = pp.Literal('}').suppress()
-  semicolon = pp.Literal(';').suppress()
-  space = pp.White().suppress()
-  key = pp.Word(string.ascii_letters + '_/')
-  value = pp.CharsNotIn('{};')
-  assignment = pp.Group(key + space + value + semicolon)
+  Section = collections.namedtuple('Section', 'name value data subsections')
 
-  subblock = pp.Forward()
-  block = pp.Forward()
-
-  subblock << pp.ZeroOrMore(block | assignment)
-  block << pp.Group(
-    pp.Group(key + pp.Optional(space + value))
-    + left_bracket
-    + subblock
-    + right_bracket
-  )
-
-  all = pp.OneOrMore(block | assignment).ignore(pp.pythonStyleComment)
+  rules = [
+    strex.Charset('ws', string.whitespace, skip=True),
+    strex.Charset('key', string.ascii_letters + '_/'),
+    strex.Keyword('left_bracket', '{'),
+    strex.Keyword('right_bracket', '}'),
+    strex.Keyword('semicolon', ';'),
+    strex.Charset('value', set(map(chr, range(0,255))) - set('{};')),  # TODO
+  ]
 
   @staticmethod
   def parse(source):
-    # TODO: Have pyparsing raise an exception if not all of the input
-    # is consumed during the parsing.
-    return ConfigParser.all.parseString(source)
+    lexer = strex.Lexer(strex.Scanner(source), ConfigParser.rules)
+    return ConfigParser._parse_section(lexer, None, None, False)
+
+  @staticmethod
+  def _parse_section(lexer, name, value, expect_closing=True):
+    section = ConfigParser.Section(name, value, [], [])
+    while True:
+      if not expect_closing:
+        key = lexer.next('key', 'eof')
+      else:
+        key = lexer.next('key', 'right_bracket')
+      if key.type in ('right_bracket', 'eof'): break
+      value = lexer.next('value', weighted=True)
+      if value: value = value.value.strip()
+      if lexer.next('semicolon', 'left_bracket').type == 'semicolon':
+        section.data.append((key.value, value))
+      else:
+        section.subsections.append(ConfigParser._parse_section(lexer, key.value, value))
+    return section
 
 
 def load_config(filename):
   ''' Load the nocrux configuration from *filename*. '''
 
   with open(filename) as fp:
-    data = ConfigParser.parse(fp.read())
+    section = ConfigParser.parse(fp.read())
 
-  for item in data:
-    if isinstance(item[0], str):
-      if item[0] == 'root':
-        config['root'] = item[1].strip()
-        if not os.path.isabs(config['root']):
-          raise ValueError('root must be an absolute path')
-      elif item[0] == 'kill_timeout':
-        config['kill_timeout'] = int(item[1].strip())
-      elif item[0] == 'include':
-        path = item[1].strip()
-        if not os.path.isabs(path):
-          path = os.path.join(os.path.dirname(filename), path)
-        if '?' in path or '*' in path:
-          for fname in glob.iglob(path):
-            load_config(fname)
-        else:
-          load_config(path)
+  for key, value in section.data:
+    if key == 'include':
+      path = value
+      if not os.path.isabs(path):
+        path = os.path.join(os.path.dirname(filename), path)
+      if '?' in path or '*' in path:
+        for fname in glob.iglob(path):
+          load_config(fname)
       else:
-        raise ValueError('invalid configuration key: {}'.format(item[0]))
+        load_config(path)
+    elif key == 'root':
+      if not os.path.isabs(value):
+        raise ValueError('root must be an absolute path')
+      config['root'] = value
+    elif key == 'kill_timeout':
+      config['kill_timeout'] = int(value.strip())
     else:
-      if item[0][0] != 'daemon':
-        raise ValueError('invalid block: {}'.format(item[0][0]))
-      name = item[0][1].strip()
-      params = {'name': name}
-      for item in item[1:]:
-        if isinstance(item[0], str):
-          if item[0] == 'run':
-            args = shlex.split(item[1])
-            if len(args) < 1:
-              raise ValueError('daemon {}: empty run key'.format(name))
-            params['prog'] = args[0]
-            params['args'] = args[1:]
-          elif item[0] == 'cwd':
-            params['cwd'] = item[1].strip()
-          elif item[0] == 'export':
-            key, sep, value = item[1].strip().partition('=')
-            if not sep:
-              raise ValueError('daemon {}: invalid export key'.format(name))
-            params.setdefault('env', {})[key] = value
-          elif item[0] in ('user', 'group'):
-            params[item[0]] = item[1].strip()
-          elif item[0] in ('stdin', 'stdout', 'stderr', 'pidfile'):
-            if item[0] == 'stderr' and item[1].strip() == '$stdout':
-              item[1] = None
-            if item[1]:
-              item[1] = string.Template(item[1]).safe_substitute(name=name, root=config['root'])
-            params[item[0]] = item[1]
-          elif item[0] == 'requires':
-            items = item[1].strip().split(' ')
-            if not items:
-              raise ValueError('daemon {}: invalid requires key'.format(name))
-            params['requires'] = items
-          else:
-            raise ValueError('daemon {}: invalid key: {}'.format(name, item))
-        else:
-          raise ValueError('daemon {}: unexpected block {}'.format(name, item[0][0]))
-      if name in daemons:
-        raise ValueError('daemon {} already defined'.format(name))
+      raise ValueError('unexpected config key: {}'.format(key))
+
+  for subsection in section.subsections:
+    if subsection.name != 'daemon':
+      raise ValueError('unexpected section: {}'.format(subsection.name))
+    if not subsection.value:
+      raise ValueError('daemon section requies a value')
+    if subsection.subsections:
+      raise ValueError('daemon section does not expect subsections')
+    name = subsection.value
+    params = {'name': name}
+    for key, value in subsection.data:
+      if key == 'run':
+        args = shlex.split(value)
+        if len(args) < 1:
+          raise ValueError('daemon {}: run field is empty'.format(name))
+        params['prog'] = args[0]
+        params['args'] = args[1:]
+      elif key == 'cwd':
+        params['cwd'] = value.strip()
+      elif key == 'export':
+        key, sep, value = value.strip().partition('=')
+        if not sep:
+          raise ValueError('daemon {}: invalid export key'.format(name))
+        params.setdefault('env', {})[key] = value
+      elif key in ('user', 'group'):
+        params[key] = value.strip()
+      elif key in ('stdin', 'stdout', 'stderr', 'pidfile'):
+        if key == 'stderr' and value.strip() == '$stdout':
+          value = None
+        if value:
+          value = string.Template(value).safe_substitute(name=name, root=config['root'])
+        params[key] = value
+      elif key == 'requires':
+        items = value.strip().split(' ')
+        if not items:
+          raise ValueError('daemon {}: requires field is invalid'.format(name))
+        params['requires'] = items
+      else:
+        raise ValueError('daemon {}: unexpected config key: {}'.format(name, item))
       daemons[name] = Daemon(**params)
-  return
 
 
 def main():

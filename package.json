@@ -1,6 +1,6 @@
 {
   "name": "@NiklasRosenstein/nocrux",
-  "version": "2.0.1",
+  "version": "2.0.0",
   "description": "a painless per-user daemon manager",
   "author": "Niklas Rosenstein <rosensteinniklas@gmail.com>",
   "license": "MIT",
@@ -9,9 +9,13 @@
   },
   "dependencies": {},
   "python-dependencies": {
-    "pyparsing": ">=2.2.0"
+    "nr": ">=1.4.6"
   },
   "dist": {
-    "include_files": ["nocrux.py", "index.py", "README.md"]
+    "include_files": [
+      "nocrux.py",
+      "index.py",
+      "README.md"
+    ]
   }
 }

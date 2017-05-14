@@ -100,6 +100,7 @@ __v2.0.1__
 * removed `fn:out`, `fn:err` and `fn:pid` commands (actually already removed in 2.0.0)
 * the default `root` config value will now be `/var/run/nocrux` if the
   configuration file is loaded from `/etc/nocrux/conf`
+* more sophisticated config file parsing with `nr.parse.strex` module
 
 __v2.0.0__
 
