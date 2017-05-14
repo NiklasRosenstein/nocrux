@@ -70,6 +70,7 @@ Below is an illustration of the configuration format:
         pidfile $root/$name.pid;
         signal term TERM;
         signal kill KILL;
+        command uptime echo $(($(date +%s) - $(date +%s -r $DAEMON_PIDFILE))) seconds;
         requires daemon1 daemon2;
     }
 

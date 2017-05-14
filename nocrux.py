@@ -42,6 +42,7 @@ from operator import attrgetter
 USER_CONFIG_FILE = os.path.expanduser('~/.nocrux/conf')
 ROOT_CONFIG_FILE = os.path.expanduser('/etc/nocrux/conf')
 ROOT_CONFIG_ROOT = '/var/run/nocrux'
+AVAILABLE_DAEMON_COMMANDS = ('start', 'stop', 'restart', 'status', 'pid', 'cat', 'tail')
 config = {
   'root': os.path.expanduser('~/.nocrux/run'),
   'kill_timeout': 10
@@ -95,7 +96,7 @@ class Daemon(object):
       self, name, prog, args=(), cwd=None, user=None, group=None,
       stdin=None, stdout=None, stderr=None, pidfile=None,
       requires=None, env=None, sigterm=signal.SIGTERM,
-      sigkill=signal.SIGKILL):
+      sigkill=signal.SIGKILL, commands=None):
     if not pidfile:
       pidfile = abspath(name + '.pid')
     if stdout is None:
@@ -120,6 +121,7 @@ class Daemon(object):
     self.requires = requires
     self.sigterm = sigterm
     self.sigkill = sigkill
+    self.commands = {} if commands is None else commands
     self.env = {} if env is None else env
 
   def __repr__(self):
@@ -385,7 +387,7 @@ def load_config(filename=None):
     if subsection.subsections:
       raise ValueError('daemon section does not expect subsections')
     name = subsection.value
-    params = {'name': name, 'env': os.environ.copy()}
+    params = {'name': name, 'env': os.environ.copy(), 'commands': {}}
     for key, value in subsection.data:
       if key == 'run':
         args = shlex.split(value)
@@ -422,6 +424,13 @@ def load_config(filename=None):
         if not hasattr(signal, signame):
           raise ValueError('daemon {}: invalid signal: {}'.format(name, parts[1]))
         params['sig' + parts[0]] = getattr(signal, signame)
+      elif key == 'command':
+        cmdname, __, cmd = map(str.strip, value.partition(' '))
+        if not cmdname or not cmd:
+          raise ValueError('daemon {}: command needs at least command and program name'.format(name))
+        if cmdname in AVAILABLE_DAEMON_COMMANDS:
+          raise ValueError('daemom {}: command name {!r} is reserved'.format(name, args[0]))
+        params['commands'][cmdname] = cmd
       else:
         raise ValueError('daemon {}: unexpected config key: {}'.format(name, item))
       daemons[name] = Daemon(**params)
@@ -491,6 +500,18 @@ def main(ctx, daemon, command, version, list, edit, stderr, follow):
     except KeyboardInterrupt:
       return ctx.exit(2)
   else:
+    if command in d.commands:
+      env = os.environ.copy()
+      env.update(d.env)
+      env['DAEMON_PID'] = str(d.pid)
+      env['DAEMON_PIDFILE'] = d.pidfile
+      env['DAEMON_STDOUT'] = d.stdout
+      env['DAEMON_STDERR'] = d.stderr or ''
+      try:
+        cmd = d.commands[command]
+        return ctx.exit(subprocess.call(cmd, shell=True, env=env))
+      except KeyboardInterrupt:
+        return ctx.exit(2)
     ctx.fail('invalid command: {}'.format(command))
 
 
