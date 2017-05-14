@@ -1,99 +1,74 @@
+# nocrux
 
-*nocrux* -- a painless **per-user** daemon manager.
+Nocrux is an easily configurable daemon manager that can be used by any user
+on the system. It uses double-forks to transfer cleanup responsibility of
+daemons to the init process.
 
-## Installation
+__Synopsis__
 
-Nocrux is developed for unix-like systems and is known to work on
-Ubuntu 15.05, Debian Jessie and macOS Sierra. It can be installed via
-Pip and Node.py. Requires **CPython 3.4** or above.
+```
+Usage: nocrux [OPTIONS] [DAEMON] [COMMAND]
+
+  Available COMMANDs: start, stop, restart, status, pid, cat, tail
+
+Options:
+  -e, --edit    Edit the nocrux configuration file.
+  -l, --list    List up all daemons and their status.
+  -f, --follow  Pass -f to the tail command.
+  --stderr      Choose stderr instead of stdout for the cat/tail command.
+  --version     Print the nocrux version and exit.
+  --help        Show this message and exit.
+```
+
+__Requirements__
+
+- Unix-like OS (tested on Ubuntu 25.05, Debian Jessie, macOS Sierra)
+- Python 3.4+
+- [Node.py] (optional)
+
+[Node.py]: https://github.com/nodepy/nodepy
+
+__Installation__
 
     $ nodepy-pm install @NiklasRosenstein/nocrux  # or
     $ pip3 install nocrux
 
-## Command-line Interface
-
-    nocrux version                 (print the version of nocrux and exit)
-    nocrux edit                    (edit the nocrux configuration file)
-    nocrux all <command>           (apply <command> on all daemons)
-    nocrux <daemon(s)> <command>   (apply <command> on the specified daemons)
-
-When specifying multiple daemons on the command-line, they must be a single
-argument and separated by a comma, for example `nocrux mongod,nginx,php-fpm stop`.
-Below is a list of the available commands.
-
-- `start` -- Start the daemon(s)
-- `stop` -- Stop the daemon(s)
-- `restart` -- Restart the daemon(s)
-- `status` -- Show the status of the daemon(s)
-
-Note that the following commands can only be used with a single daemon.
-
-- `tail`-- Alias for `tail:out`
-- `tail:out` -- Shows the tail of the daemons' stdout
-- `tail:err` -- Shows the tail of the daemons' stderr
-- `pid` -- Print the PID of the daemon (0 if the daemon is not running)
-
-## Daemon termination
+__A note about daemon termination__
 
 *nocrux* can only send SIGTERM (and alternatively SIGKILL if the process
 doesn't respond to the previous signal) to the main process that was also
 started with *nocrux*. If that process spawns any subprocess, it must take
 care of forwarding the signals to the child processes.
 
-The thread [Forward SIGTERM to child in Bash](http://unix.stackexchange.com/q/146756/73728)
-contains some information on doing that for Bash scripts. For very simple
-scripts that just set up an environment, I recommend the `exec` approach.
+The thread [Forward SIGTERM to child in Bash][0] contains some information on
+doing that for Bash scripts. For very simple scripts that just set up an
+environment, I recommend the `exec` approach.
+
+  [0]: http://unix.stackexchange.com/q/146756/73728
 
 ## Configuration
 
-The configuration file is loaded from `~/.nocrux/conf` or `/etc/nocrux/conf`
-(preferring the former over the latter). The syntax is similar to what you
-know from NGinx.
+You can use `nocrux --edit` to open the `$EDITOR` (defaults to `nano`) with
+the nocrux configuration file. The configuration file must be located at
+`~/.nocrux/conf` but can also be placed globally in `/etc/nocrux/conf`.
 
-    ## Directory where the default daemon files are stored. Defaults to
-    ## /var/run/nocrux if the configuration file is read from /etc/nocrux/conf,
-    ## otherwise defaults to ~/.nocrux/run .
-    #root ~/.nocrux/run;
-    
-    ## The timeout after which a process will be killed when it can not
-    ## be terminated with SIGINT.
-    #kill_timeout 10;
+Below is an illustration of the configuration format:
 
-    ## Include all files in the conf.d directory relative to the
-    ## configuration file.
+    root ~/.nocrux/run;
+    kill_timeout 10;
     include conf.d/*;
 
-    ## Defines a daemon.
     daemon test {
+        export PATH=/usr/sbin:$PATH;
         run ~/Desktop/mytestdaemon.sh arg1 "arg 2";
         cwd ~;
-        export PATH=/usr/sbin:$PATH;
-        export MYTESTDAEMON_DEBUG=true;
-
-        ## The user to run start the daemon as. If omitted, the user will
-        ## not be changed.
-        #user www-data;
-
-        ## The group to run start the daemon as. If omitted, the user will
-        ## not be changed.
-        #group www-data;
-
-        ## Path to a file to input to stdin.
-        #stdin /dev/null;
-
-        ## Path to the file that will capture the daemon's stdout.
-        #stdout $root/$name.out;
-
-        ## Path to the file that will capture the daemon's stderr.
-        #stderr $stdout;
-
-        ## Path to the file that will be used to store the PID.
-        ## Do not change this value until the daemon is stopped again.
-        #pidfile $root/$name.pid;
-
-        ## Zero, one or more names of daemons that need to be started
-        ## before this daemon can be started.
-        #requires daemon1 daemon2;
+        user me;
+        group me;
+        stdin /dev/null;
+        stdout $root/$name.out;
+        stderr $stdout;
+        pidfile $root/$name.pid;
+        requires daemon1 daemon2;
     }
 
 ## Changelog
@@ -101,6 +76,7 @@ know from NGinx.
 __v2.0.3__
 
 - support environment variable substition in the `daemon > export` field
+- rework command-line interface with Click
 
 __v2.0.2__
 

@@ -21,7 +21,7 @@
 __author__ = 'Niklas Rosenstein <rosensteinniklas@gmail.com>'
 __version__ = '2.0.2'
 
-import argparse
+import click
 import collections
 import errno
 import glob
@@ -39,6 +39,9 @@ import time
 import types
 from operator import attrgetter
 
+USER_CONFIG_FILE = os.path.expanduser('~/.nocrux/conf')
+ROOT_CONFIG_FILE = os.path.expanduser('/etc/nocrux/conf')
+ROOT_CONFIG_ROOT = '/var/run/nocrux'
 config = {
   'root': os.path.expanduser('~/.nocrux/run'),
   'kill_timeout': 10
@@ -338,8 +341,16 @@ class ConfigParser(object):
     return section
 
 
-def load_config(filename):
+def load_config(filename=None):
   ''' Load the nocrux configuration from *filename*. '''
+
+  if filename is None:
+    filename = USER_CONFIG_FILE
+    if not os.path.isfile(filename):
+      filename = ROOT_CONFIG_FILE
+      config['root'] = ROOT_CONFIG_ROOT
+    if not os.path.isfile(filename):
+      return False  # no configuration file exists
 
   with open(filename) as fp:
     section = ConfigParser.parse(fp.read())
@@ -404,111 +415,72 @@ def load_config(filename):
         raise ValueError('daemon {}: unexpected config key: {}'.format(name, item))
       daemons[name] = Daemon(**params)
 
+  return True
 
-def main():
-  parser = argparse.ArgumentParser(
-    prog='nocrux',
-    description="""
-  nocrux -- a painless per-user daemon manager
 
-    https://github.com/NiklasRosenstein/nocrux
+@click.command()
+@click.argument('daemon', required=False)
+@click.argument('command', required=False)
+@click.option('-e', '--edit', is_flag=True, help='Edit the nocrux configuration file.')
+@click.option('-l', '--list', is_flag=True, help='List up all daemons and their status.')
+@click.option('-f', '--follow', is_flag=True, help='Pass -f to the tail command.')
+@click.option('--stderr', is_flag=True, help='Choose stderr instead of stdout for the cat/tail command.')
+@click.option('--version', is_flag=True, help='Print the nocrux version and exit.')
+@click.pass_context
+def main(ctx, daemon, command, version, list, edit, stderr, follow):
+  """
+  Available COMMANDs: start, stop, restart, status, pid, cat, tail
+  """
 
-synopsis:
-  nocrux version
-  nocrux edit
-  nocrux all <command>
-  nocrux <daemon(s)> <command>""",
-    formatter_class=argparse.RawTextHelpFormatter)
-  parser.add_argument(
-    'daemon',
-    default=[],
-    help="name of one or more daemons to interact with. Use 'all' to refer "
-         "to all registered daemons. Can be comma-separated to list multiple "
-         "daemons.")
-  parser.add_argument(
-    'command',
-    choices=['version', 'edit', 'start', 'stop', 'restart', 'status',
-             'pid', 'tail', 'tail:out', 'tail:err'], nargs='?')
-  args = parser.parse_args()
-  if not args.command:
-    args.command, args.daemon = args.daemon, ''
-
-  # Determine the configuration file location.
-  config_file = create_config_file = os.path.expanduser('~/.nocrux/conf')
-  if not os.path.isfile(config_file):
-    config_file = '/etc/nocrux/conf'
-    config['root'] = '/var/run/nocrux'
-
-  if args.command == 'version':
+  if version:
     print('nocrux v{}'.format(__version__))
-    return 0
-  elif args.command == 'edit':
+    return ctx.exit(0)
+  if edit:
+    config_file = USER_CONFIG_FILE
     if not os.path.isfile(config_file):
-      config_file = create_config_file
+      config_file = ROOT_CONFIG_FILE
     makedirs(os.path.dirname(config_file))
     editor = os.getenv('EDITOR', 'nano')
-    return subprocess.call([editor, config_file])
-
-  args.daemons = list(filter(bool, map(str.strip, args.daemon.strip(',').split(','))))
-  if not args.daemons:
-    parser.error('need at least one argument for "daemons"')
-
-  if not os.path.isfile(config_file):
-    print("Error: file '~/.nocrux/conf' or '/etc/nocrux/conf' does not exist")
-    return 1
-  load_config(config_file)
-
-  if args.daemons == ['all']:
-    target_daemons = sorted(list(daemons.values()), key=attrgetter('name'))
-  else:
-    try:
-      target_daemons = [daemons[x] for x in args.daemons]
-    except KeyError as exc:
-      parser.error('unknown daemon {!r}'.format(str(exc)))
-
-  if args.command == 'status':
-    for daemon in target_daemons:
+    return ctx.exit(subprocess.call([editor, config_file]))
+  if list:
+    load_config()
+    for daemon in sorted(daemons.values(), key=attrgetter('name')):
       daemon.log(daemon.status)
-    return 0
-  elif args.command == 'stop':
-    for daemon in target_daemons:
-      daemon.stop()
-    return 0
-  elif args.command == 'start':
-    for daemon in target_daemons:
-      if not daemon.start():
-        return 1
-    return 0
-  elif args.command == 'restart':
-    for daemon in target_daemons:
-      daemon.stop()
-    for daemon in target_daemons:
-      if not daemon.start():
-        return 1
-    return 0
-  elif args.command in ('pid', 'tail', 'tail:out', 'tail:err'):
-    if len(target_daemons) != 1 or args.daemons == ['all']:
-      parser.error('command "{0}": only one daemon name expected'.format(args.command))
-    daemon = target_daemons[0]
-    if args.command in ('tail', 'tail:out'):
-      if daemon.stdout:
-        try:
-          subprocess.call(['tail', '-f', daemon.stdout])
-        except KeyboardInterrupt:
-          pass
-    elif args.command == 'tail:err':
-      if daemon.stderr:
-        try:
-          subprocess.call(['tail', '-f', daemon.stderr])
-        except KeyboardInterrupt:
-          pass
-    elif args.command == 'pid':
-      print(daemon.pid)
-    else:
-      assert False
-    return 0
+    return ctx.exit(0)
 
-  parser.error('unknown command {!r}'.format(args.command))
+  if not daemon:
+    ctx.fail('specify a daemon name')
+  if not command:
+    ctx.fail('specify a command name')
+
+  load_config()
+  if daemon not in daemons:
+    ctx.fail('no such daemon: {}'.format(daemon))
+  d = daemons[daemon]
+
+  if command == 'start':
+    d.start()
+  elif command == 'stop':
+    d.stop()
+  elif command == 'restart':
+    d.stop()
+    d.start()
+  elif command == 'status':
+    d.log(d.status)
+  elif command == 'pid':
+    print(d.pid)
+  elif command in ('cat', 'tail'):
+    if stderr and not d.stderr:
+      ctx.fail('daemon has no separate stderr')
+    args = [command, d.stderr if stderr else d.stdout]
+    if command == 'tail' and follow:
+      args.insert(1, '-f')
+    try:
+      return ctx.exit(subprocess.call(args))
+    except KeyboardInterrupt:
+      return ctx.exit(2)
+  else:
+    ctx.fail('invalid command: {}'.format(command))
 
 
 if ('require' in globals() and require.main == module) or __name__ == '__main__':

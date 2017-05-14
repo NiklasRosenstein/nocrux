@@ -9,6 +9,7 @@
   },
   "dependencies": {},
   "python-dependencies": {
+    "click": ">=6.7",
     "nr": ">=1.4.6"
   },
   "dist": {
