@@ -3,10 +3,10 @@
 
 ## Installation
 
-The *nocrux* daemon manager is available via Pip and PPYM. Minimum version
+The *nocrux* daemon manager is available via Pip and Node.py. Minimum version
 required is Python 3.4. It has been tested on Ubuntu 15.05 and macOS Sierra.
 
-    $ ppym install nocrux  #or
+    $ nodepy-pm install @NiklasRosenstein/nocrux  #or
     $ pip3 install nocrux
 
 ## Configuration
@@ -109,7 +109,7 @@ __v2.0.0__
 * configuration file is no longer a Python script
 * configuration file must now be located at `~/.nocrux/conf` or
   `/etc/nocrux/conf`
-* nocrux can now be installed via PPYM and is compatible with Node.py
+* nocrux can now be installed via Node.py
 * add support for defining per-process environment variables
 
 __v1.1.3__
