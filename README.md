@@ -3,11 +3,46 @@
 
 ## Installation
 
-The *nocrux* daemon manager is available via Pip and Node.py. Minimum version
-required is Python 3.4. It has been tested on Ubuntu 15.05 and macOS Sierra.
+Nocrux is developed for unix-like systems and is known to work on
+Ubuntu 15.05, Debian Jessie and macOS Sierra. It can be installed via
+Pip and Node.py. Requires **CPython 3.4** or above.
 
-    $ nodepy-pm install @NiklasRosenstein/nocrux  #or
+    $ nodepy-pm install @NiklasRosenstein/nocrux  # or
     $ pip3 install nocrux
+
+## Command-line Interface
+
+    nocrux version                 (print the version of nocrux and exit)
+    nocrux edit                    (edit the nocrux configuration file)
+    nocrux all <command>           (apply <command> on all daemons)
+    nocrux <daemon(s)> <command>   (apply <command> on the specified daemons)
+
+When specifying multiple daemons on the command-line, they must be a single
+argument and separated by a comma, for example `nocrux mongod,nginx,php-fpm stop`.
+Below is a list of the available commands.
+
+- `start` -- Start the daemon(s)
+- `stop` -- Stop the daemon(s)
+- `restart` -- Restart the daemon(s)
+- `status` -- Show the status of the daemon(s)
+
+Note that the following commands can only be used with a single daemon.
+
+- `tail`-- Alias for `tail:out`
+- `tail:out` -- Shows the tail of the daemons' stdout
+- `tail:err` -- Shows the tail of the daemons' stderr
+- `pid` -- Print the PID of the daemon (0 if the daemon is not running)
+
+## Daemon termination
+
+*nocrux* can only send SIGTERM (and alternatively SIGKILL if the process
+doesn't respond to the previous signal) to the main process that was also
+started with *nocrux*. If that process spawns any subprocess, it must take
+care of forwarding the signals to the child processes.
+
+The thread [Forward SIGTERM to child in Bash](http://unix.stackexchange.com/q/146756/73728)
+contains some information on doing that for Bash scripts. For very simple
+scripts that just set up an environment, I recommend the `exec` approach.
 
 ## Configuration
 
@@ -60,40 +95,6 @@ know from NGinx.
         ## before this daemon can be started.
         #requires daemon1 daemon2;
     }
-
-## Command-line Interface
-
-    nocrux version                 (print the version of nocrux and exit)
-    nocrux edit                    (edit the nocrux configuration file)
-    nocrux all <command>           (apply <command> on all daemons)
-    nocrux <daemon(s)> <command>   (apply <command> on the specified daemons)
-
-When specifying multiple daemons on the command-line, they must be a single
-argument and separated by a comma, for example `nocrux mongod,nginx,php-fpm stop`.
-Below is a list of the available commands.
-
-- `start` -- Start the daemon(s)
-- `stop` -- Stop the daemon(s)
-- `restart` -- Restart the daemon(s)
-- `status` -- Show the status of the daemon(s)
-
-Note that the following commands can only be used with a single daemon.
-
-- `tail`-- Alias for `tail:out`
-- `tail:out` -- Shows the tail of the daemons' stdout
-- `tail:err` -- Shows the tail of the daemons' stderr
-- `pid` -- Print the PID of the daemon (0 if the daemon is not running)
-
-## Daemon termination
-
-*nocrux* can only send SIGTERM (and alternatively SIGKILL if the process
-doesn't respond to the previous signal) to the main process that was also
-started with *nocrux*. If that process spawns any subprocess, it must take
-care of forwarding the signals to the child processes.
-
-The thread [Forward SIGTERM to child in Bash](http://unix.stackexchange.com/q/146756/73728)
-contains some information on doing that for Bash scripts. For very simple
-scripts that just set up an environment, I recommend the `exec` approach.
 
 ## Changelog
 
