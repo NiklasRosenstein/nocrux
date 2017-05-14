@@ -493,12 +493,5 @@ def main():
   parser.error('unknown command {!r}'.format(args.command))
 
 
-if __name__ == '__main__':
+if ('require' in globals() and require.main == module) or __name__ == '__main__':
   sys.exit(main())
-else:
-  try:
-    require
-  except NameError: pass
-  else:
-    if require.main == module:
-      sys.exit(main())
