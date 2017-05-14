@@ -68,6 +68,8 @@ Below is an illustration of the configuration format:
         stdout $root/$name.out;
         stderr $stdout;
         pidfile $root/$name.pid;
+        signal term TERM;
+        signal kill KILL;
         requires daemon1 daemon2;
     }
 

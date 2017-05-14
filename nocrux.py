@@ -94,7 +94,8 @@ class Daemon(object):
   def __init__(
       self, name, prog, args=(), cwd=None, user=None, group=None,
       stdin=None, stdout=None, stderr=None, pidfile=None,
-      requires=None, env=None):
+      requires=None, env=None, sigterm=signal.SIGTERM,
+      sigkill=signal.SIGKILL):
     if not pidfile:
       pidfile = abspath(name + '.pid')
     if stdout is None:
@@ -117,6 +118,8 @@ class Daemon(object):
     self.stderr = stderr
     self.pidfile = pidfile
     self.requires = requires
+    self.sigterm = sigterm
+    self.sigkill = sigkill
     self.env = {} if env is None else env
 
   def __repr__(self):
@@ -274,9 +277,9 @@ class Daemon(object):
     sys.exit(0)
 
   def stop(self):
-    ''' Stop the daemon if it is running. Sends :data:`signal.SIGTERM`
-    first, then waits at maximum ``config.kill_timeout`` seconds and
-    sends ``signal.SIGKILL`` if the process hasn't terminated by then. '''
+    ''' Stop the daemon if it is running. Sends :attr:`sigterm` first, then
+    waits at maximum ``config['kill_timeout']`` seconds and sends
+    :attr`sigkill` if the process hasn't terminated by then. '''
 
     pid = self.pid
     if pid == 0:
@@ -284,7 +287,7 @@ class Daemon(object):
       return
 
     try:
-      os.kill(pid, signal.SIGTERM)
+      os.kill(pid, self.sigterm)
     except OSError as exc:
       self.log('failed:', exc)
     else:
@@ -295,7 +298,7 @@ class Daemon(object):
       if process_exists(pid):
         self.log('failed')
         self.log('killing...')
-        try: os.kill(pid, signal.SIGKILL)
+        try: os.kill(pid, self.sigkill)
         except OSError: pass
         if process_exists(pid):
           self.log('failed')
@@ -411,6 +414,14 @@ def load_config(filename=None):
         if not items:
           raise ValueError('daemon {}: requires field is invalid'.format(name))
         params['requires'] = items
+      elif key == 'signal':
+        parts = value.split(' ')
+        if len(parts) != 2 or parts[0] not in ('term', 'kill'):
+          raise ValueError('daemon {}: invalid signal field: {!r}'.format(name, value))
+        signame = 'SIG' + parts[1].upper()
+        if not hasattr(signal, signame):
+          raise ValueError('daemon {}: invalid signal: {}'.format(name, parts[1]))
+        params['sig' + parts[0]] = getattr(signal, signame)
       else:
         raise ValueError('daemon {}: unexpected config key: {}'.format(name, item))
       daemons[name] = Daemon(**params)
