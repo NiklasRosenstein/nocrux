@@ -37,6 +37,7 @@ import sys
 import textwrap
 import time
 import types
+from operator import attrgetter
 
 config = {
   'root': os.path.expanduser('~/.nocrux/run'),
@@ -407,9 +408,16 @@ def main():
   parser = argparse.ArgumentParser(
     prog='nocrux',
     description="""
-      a painless per-user daemon manager.
-      https://github.com/NiklasRosenstein/nocrux
-      """)
+  nocrux -- a painless per-user daemon manager
+
+    https://github.com/NiklasRosenstein/nocrux
+
+synopsis:
+  nocrux version
+  nocrux edit
+  nocrux all <command>
+  nocrux <daemon(s)> <command>""",
+    formatter_class=argparse.RawTextHelpFormatter)
   parser.add_argument(
     'daemon',
     default=[],
@@ -418,30 +426,39 @@ def main():
          "daemons.")
   parser.add_argument(
     'command',
-    choices=['version', 'start', 'stop', 'restart', 'status',
-             'pid', 'tail', 'tail:out', 'tail:err'])
+    choices=['version', 'edit', 'start', 'stop', 'restart', 'status',
+             'pid', 'tail', 'tail:out', 'tail:err'], nargs='?')
   args = parser.parse_args()
+  if not args.command:
+    args.command, args.daemon = args.daemon, ''
+
+  # Determine the configuration file location.
+  config_file = create_config_file = os.path.expanduser('~/.nocrux/conf')
+  if not os.path.isfile(config_file):
+    config_file = '/etc/nocrux/conf'
+    config['root'] = '/var/run/nocrux'
 
   if args.command == 'version':
     print('nocrux v{}'.format(__version__))
     return 0
+  elif args.command == 'edit':
+    if not os.path.isfile(config_file):
+      config_file = create_config_file
+    makedirs(os.path.dirname(config_file))
+    editor = os.getenv('EDITOR', 'nano')
+    return subprocess.call([editor, config_file])
 
-  args.daemons = args.daemon.strip(',').split(',')
+  args.daemons = list(filter(bool, map(str.strip, args.daemon.strip(',').split(','))))
   if not args.daemons:
     parser.error('need at least one argument for "daemons"')
 
-  # Load the nocrux configuration file.
-  config_file = os.path.expanduser('~/.nocrux/conf')
   if not os.path.isfile(config_file):
-    config_file = '/etc/nocrux/conf'
-    config['root'] = '/var/run/nocrux'
-    if not os.path.isfile(config_file):
-      print("Error: file '~/.nocrux/conf' or '/etc/nocrux/conf' does not exist")
-      return 1
+    print("Error: file '~/.nocrux/conf' or '/etc/nocrux/conf' does not exist")
+    return 1
   load_config(config_file)
 
   if args.daemons == ['all']:
-    target_daemons = list(daemons.values())
+    target_daemons = sorted(list(daemons.values()), key=attrgetter('name'))
   else:
     try:
       target_daemons = [daemons[x] for x in args.daemons]

@@ -95,6 +95,12 @@ scripts that just set up an environment, I recommend the `exec` approach.
 
 ## Changelog
 
+__v2.0.2__
+
+- fix `nocrux version` command
+- add `nocrux edit` command
+- order of daemons when referencing them with `all` is now sorted alphabetically
+
 __v2.0.1__
 
 * removed `fn:out`, `fn:err` and `fn:pid` commands (actually already removed in 2.0.0)
