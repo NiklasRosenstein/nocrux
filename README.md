@@ -101,6 +101,8 @@ __v2.0.1__
 * the default `root` config value will now be `/var/run/nocrux` if the
   configuration file is loaded from `/etc/nocrux/conf`
 * more sophisticated config file parsing with `nr.parse.strex` module
+* update error message hinting to check output of `nocrux <daemon> tail` if
+  daemon could not be started
 
 __v2.0.0__
 

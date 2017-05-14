@@ -195,8 +195,8 @@ class Daemon(object):
       if process_exists(pid):
         self.log('started. (pid: {0})'.format(pid))
       else:
-        outname = 'err' if self.stderr else 'out'
-        self.log('could not be started. try  "tail -f $(nocrux fn:{0} {1})"'.format(outname, self.name))
+        cmd = 'tail:err' if self.stderr else 'tail'
+        self.log('could not be started. try "nocrux {} {}"'.format(self.name, cmd))
       return True
 
     # Make sure the directory of the PID and output files exist.
@@ -468,7 +468,7 @@ def main():
       if not daemon.start():
         return 1
     return 0
-  elif args.command in ('fn:out', 'fn:err', 'fn:pid', 'pid', 'tail', 'tail:out', 'tail:err'):
+  elif args.command in ('pid', 'tail', 'tail:out', 'tail:err'):
     if len(target_daemons) != 1 or args.daemons == ['all']:
       parser.error('command "{0}": only one daemon name expected'.format(args.command))
     daemon = target_daemons[0]
