@@ -32,6 +32,7 @@ know from NGinx.
     daemon test {
         run ~/Desktop/mytestdaemon.sh arg1 "arg 2";
         cwd ~;
+        export PATH=/usr/sbin:$PATH;
         export MYTESTDAEMON_DEBUG=true;
 
         ## The user to run start the daemon as. If omitted, the user will
@@ -95,6 +96,10 @@ contains some information on doing that for Bash scripts. For very simple
 scripts that just set up an environment, I recommend the `exec` approach.
 
 ## Changelog
+
+__v2.0.3__
+
+- support environment variable substition in the `daemon > export` field
 
 __v2.0.2__
 

@@ -371,7 +371,7 @@ def load_config(filename):
     if subsection.subsections:
       raise ValueError('daemon section does not expect subsections')
     name = subsection.value
-    params = {'name': name}
+    params = {'name': name, 'env': os.environ.copy()}
     for key, value in subsection.data:
       if key == 'run':
         args = shlex.split(value)
@@ -385,7 +385,8 @@ def load_config(filename):
         key, sep, value = value.strip().partition('=')
         if not sep:
           raise ValueError('daemon {}: invalid export key'.format(name))
-        params.setdefault('env', {})[key] = value
+        value = string.Template(value).safe_substitute(params['env'])
+        params['env'][key] = value
       elif key in ('user', 'group'):
         params[key] = value.strip()
       elif key in ('stdin', 'stdout', 'stderr', 'pidfile'):
