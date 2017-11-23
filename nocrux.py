@@ -456,6 +456,7 @@ def rerun_with_sudo(args):
   if args.follow: sudo_argv.append('--follow')
   if args.stderr: sudo_argv.append('--stderr')
   if args.version: sudo_argv.append('--version')
+  print('$', ' '.join(map(shlex.quote, sudo_argv)))
   return subprocess.call(sudo_argv)
 
 
