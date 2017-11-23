@@ -113,7 +113,7 @@ __Requirements__
 __Installation__
 
     $ pip3 install nocrux    # or
-    $ nodepy-pm install git+https://github.com/NiklasRosenstein/nocrux.git@v2.0.2
+    $ nodepy-pm install git+https://github.com/NiklasRosenstein/nocrux.git@v2.0.3
 
 __A note about daemon termination__
 

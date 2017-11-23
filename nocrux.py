@@ -19,7 +19,7 @@
 # THE SOFTWARE.
 
 __author__ = 'Niklas Rosenstein <rosensteinniklas@gmail.com>'
-__version__ = '2.0.2'
+__version__ = '2.0.3'
 
 import argparse
 import collections

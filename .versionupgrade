@@ -3,4 +3,4 @@ tag v{VERSION}
 upgrade nodepy.json:  "version": "{VERSION}
 upgrade nocrux.py:__version__ = '{VERSION}'
 upgrade setup.py:  version='{VERSION}',
-upgrade README.py:.*nocrux.git@v{VERSION}
+upgrade README.md:.*nocrux.git@v{VERSION}

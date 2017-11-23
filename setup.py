@@ -50,7 +50,7 @@ def readme():
 
 setup(
   name='nocrux',
-  version='2.0.2',
+  version='2.0.3',
   description='a painless per-user daemon manager',
   long_description=readme(),
   author='Niklas Rosenstein',
