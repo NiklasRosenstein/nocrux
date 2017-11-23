@@ -78,15 +78,17 @@ Below is an illustration of the configuration format:
 
 __v2.0.3__
 
-- update for Node.py 2
-- support environment variable substition in the `daemon > export` field
-- fix loading of configuration, now any other option can preceed the `run`
-  option
-- support custom signals for termination and killing a daemon process
+- Update for Node.py 2
+- Add `--sudo` command-line option
+- Add `--as <user>` command-line option
+- Add support for variable substition in the `daemon { export; }` field
+- Add support for custom signals for termination and killing a daemon process
   (see issue #21)
-- support custom daemon subcommands that have access to the following
-  environment variables: `$DAEMON_PID, $DAEMON_PIDFILE, $DAEMON_STDOUT,
-  $DAEMON_STDERR` (see issue #22)
+- Add support for custom daemon subcommands that have access to the following
+  environment variables: `$DAEMON_PID`, `$DAEMON_PIDFILE`, `$DAEMON_STDOUT`,
+  `$DAEMON_STDERR` (see issue #22)
+- Fix configuration loading (`run;` may now be preceeded by any other option)
+- Fix `-e, --edit` now opens the editor always for the user's file
 
 __v2.0.2__
 

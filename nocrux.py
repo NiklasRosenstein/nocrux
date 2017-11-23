@@ -355,12 +355,7 @@ def load_config(filename=None):
   ''' Load the nocrux configuration from *filename*. '''
 
   if filename is None:
-    filename = USER_CONFIG_FILE
-    if not os.path.isfile(filename):
-      filename = ROOT_CONFIG_FILE
-      config['root'] = ROOT_CONFIG_ROOT
-    if not os.path.isfile(filename):
-      return False  # no configuration file exists
+    filename = os.getenv('NOCRUX_CONFIG', '') or get_config_filename()
 
   with open(filename) as fp:
     section = ConfigParser.parse(fp.read())
@@ -449,17 +444,33 @@ def main(argv=None):
   """
 
   parser = argparse.ArgumentParser()
-  parser.add_argument('daemon', nargs='?')
-  parser.add_argument('command', nargs='?')
+  parser.add_argument('daemon', nargs='?', help='The name of the daemon.')
+  parser.add_argument('command', nargs='?', help='A command to execute on the specified daemon.')
   parser.add_argument('-e', '--edit', action='store_true', help='Edit the nocrux configuration file.')
   parser.add_argument('-l', '--list', action='store_true', help='List up all daemons and their status.')
   parser.add_argument('-f', '--follow', action='store_true', help='Pass -f to the tail command.')
+  parser.add_argument('--sudo', action='store_true', help='Re-invoke the same command with sudo.')
+  parser.add_argument('--as', dest='as_', help='Run the command as the specified user. Overrides --sudo.')
   parser.add_argument('--stderr', action='store_true', help='Choose stderr instead of stdout for the cat/tail command.')
   parser.add_argument('--version', action='store_true', help='Print the nocrux version and exit.')
   args = parser.parse_args(argv)
   def fail(msg, code=1):
     print(msg, file=sys.stderr)
     sys.exit(code)
+
+  if args.sudo or args.as_:
+    sudo_argv = ['sudo']
+    if args.as_: sudo_argv.extend(['-u', args.as_])
+    sudo_argv.append('NOCRUX_CONFIG={}'.format(get_config_filename()))
+    sudo_argv.append(sys.argv[0])
+    if args.daemon: sudo_argv.append(args.daemon)
+    if args.command: sudo_argv.append(args.command)
+    if args.edit: sudo_argv.append('--edit')
+    if args.list: sudo_argv.append('--list')
+    if args.follow: sudo_argv.append('--follow')
+    if args.stderr: sudo_argv.append('--stderr')
+    if args.version: sudo_argv.append('--version')
+    return subprocess.call(sudo_argv)
 
   if args.version:
     print('nocrux v{}'.format(__version__))
