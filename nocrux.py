@@ -433,7 +433,7 @@ def load_config(filename=None):
         params['commands'][cmdname] = cmd
       else:
         raise ValueError('daemon {}: unexpected config key: {}'.format(name, item))
-      daemons[name] = Daemon(**params)
+    daemons[name] = Daemon(**params)
 
   return True
 
