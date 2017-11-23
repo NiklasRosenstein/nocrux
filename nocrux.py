@@ -21,7 +21,7 @@
 __author__ = 'Niklas Rosenstein <rosensteinniklas@gmail.com>'
 __version__ = '2.0.2'
 
-import click
+import argparse
 import collections
 import errno
 import glob
@@ -94,9 +94,8 @@ class Daemon(object):
 
   def __init__(
       self, name, prog, args=(), cwd=None, user=None, group=None,
-      stdin=None, stdout=None, stderr=None, pidfile=None,
-      requires=None, env=None, sigterm=signal.SIGTERM,
-      sigkill=signal.SIGKILL, commands=None):
+      stdin=None, stdout=None, stderr=None, pidfile=None, requires=None,
+      env=None, sigterm=None, sigkill=None, commands=None):
     if not pidfile:
       pidfile = abspath(name + '.pid')
     if stdout is None:
@@ -119,8 +118,8 @@ class Daemon(object):
     self.stderr = stderr
     self.pidfile = pidfile
     self.requires = requires
-    self.sigterm = sigterm
-    self.sigkill = sigkill
+    self.sigterm = signal.SIGTERM if sigterm is None else sigterm
+    self.sigkill = signal.SIGKILL if sigkill is None else sigkill
     self.commands = {} if commands is None else commands
     self.env = {} if env is None else env
 
@@ -438,69 +437,73 @@ def load_config(filename=None):
   return True
 
 
-@click.command()
-@click.argument('daemon', required=False)
-@click.argument('command', required=False)
-@click.option('-e', '--edit', is_flag=True, help='Edit the nocrux configuration file.')
-@click.option('-l', '--list', is_flag=True, help='List up all daemons and their status.')
-@click.option('-f', '--follow', is_flag=True, help='Pass -f to the tail command.')
-@click.option('--stderr', is_flag=True, help='Choose stderr instead of stdout for the cat/tail command.')
-@click.option('--version', is_flag=True, help='Print the nocrux version and exit.')
-@click.pass_context
-def main(ctx, daemon, command, version, list, edit, stderr, follow):
+def main(argv=None):
   """
   Available COMMANDs: start, stop, restart, status, pid, cat, tail
   """
 
-  if version:
+  parser = argparse.ArgumentParser()
+  parser.add_argument('daemon', nargs='?')
+  parser.add_argument('command', nargs='?')
+  parser.add_argument('-e', '--edit', action='store_true', help='Edit the nocrux configuration file.')
+  parser.add_argument('-l', '--list', action='store_true', help='List up all daemons and their status.')
+  parser.add_argument('-f', '--follow', action='store_true', help='Pass -f to the tail command.')
+  parser.add_argument('--stderr', action='store_true', help='Choose stderr instead of stdout for the cat/tail command.')
+  parser.add_argument('--version', action='store_true', help='Print the nocrux version and exit.')
+  args = parser.parse_args(argv)
+  def fail(msg, code=1):
+    print(msg, file=sys.stderr)
+    sys.exit(code)
+
+  if args.version:
     print('nocrux v{}'.format(__version__))
-    return ctx.exit(0)
-  if edit:
+    return 0
+  if args.edit:
     config_file = USER_CONFIG_FILE
     if not os.path.isfile(config_file):
       config_file = ROOT_CONFIG_FILE
     makedirs(os.path.dirname(config_file))
     editor = os.getenv('EDITOR', 'nano')
-    return ctx.exit(subprocess.call([editor, config_file]))
-  if list:
+    return subprocess.call([editor, config_file])
+  if args.list:
     load_config()
     for daemon in sorted(daemons.values(), key=attrgetter('name')):
       daemon.log(daemon.status)
-    return ctx.exit(0)
+    return 0
 
-  if not daemon:
-    ctx.fail('specify a daemon name')
-  if not command:
-    ctx.fail('specify a command name')
+  if not args.daemon:
+    fail('specify a daemon name')
+  if not args.command:
+    fail('specify a command name')
 
   load_config()
-  if daemon not in daemons:
-    ctx.fail('no such daemon: {}'.format(daemon))
-  d = daemons[daemon]
+  if args.daemon not in daemons:
+    fail('no such daemon: {}'.format(args.daemon))
+  d = daemons[args.daemon]
 
-  if command == 'start':
+  if args.command == 'start':
     d.start()
-  elif command == 'stop':
+  elif args.command == 'stop':
     d.stop()
-  elif command == 'restart':
+  elif args.command == 'restart':
     d.stop()
     d.start()
-  elif command == 'status':
+  elif args.command == 'status':
     d.log(d.status)
-  elif command == 'pid':
+  elif args.command == 'pid':
     print(d.pid)
-  elif command in ('cat', 'tail'):
-    if stderr and not d.stderr:
-      ctx.fail('daemon has no separate stderr')
-    args = [command, d.stderr if stderr else d.stdout]
-    if command == 'tail' and follow:
+  elif args.command in ('cat', 'tail'):
+    if args.stderr and not d.stderr:
+      fail('daemon has no separate stderr')
+    args = [args.command, d.stderr if args.stderr else d.stdout]
+    if args.command == 'tail' and args.follow:
       args.insert(1, '-f')
     try:
-      return ctx.exit(subprocess.call(args))
+      return subprocess.call(args)
     except KeyboardInterrupt:
-      return ctx.exit(2)
+      return 2
   else:
-    if command in d.commands:
+    if args.command in d.commands:
       env = os.environ.copy()
       env.update(d.env)
       env['DAEMON_PID'] = str(d.pid)
@@ -508,11 +511,11 @@ def main(ctx, daemon, command, version, list, edit, stderr, follow):
       env['DAEMON_STDOUT'] = d.stdout
       env['DAEMON_STDERR'] = d.stderr or ''
       try:
-        cmd = d.commands[command]
-        return ctx.exit(subprocess.call(cmd, shell=True, env=env))
+        cmd = d.commands[args.command]
+        return subprocess.call(cmd, shell=True, env=env)
       except KeyboardInterrupt:
-        return ctx.exit(2)
-    ctx.fail('invalid command: {}'.format(command))
+        return 2
+    fail('invalid command: {}'.format(command))
 
 
 if ('require' in globals() and require.main == module) or __name__ == '__main__':
