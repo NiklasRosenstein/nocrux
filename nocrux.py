@@ -72,6 +72,12 @@ def makedirs(path):
     os.makedirs(path)
 
 
+def get_config_filename():
+  if os.geteuid() == 0:
+    return ROOT_CONFIG_FILE
+  return USER_CONFIG_FILE
+
+
 def process_exists(pid):
   ''' Checks if the process represented by *pid* exists and returns
   True in that case, otherwise False. '''
@@ -459,9 +465,7 @@ def main(argv=None):
     print('nocrux v{}'.format(__version__))
     return 0
   if args.edit:
-    config_file = USER_CONFIG_FILE
-    if not os.path.isfile(config_file):
-      config_file = ROOT_CONFIG_FILE
+    config_file = get_config_filename()
     makedirs(os.path.dirname(config_file))
     editor = os.getenv('EDITOR', 'nano')
     return subprocess.call([editor, config_file])
@@ -495,11 +499,11 @@ def main(argv=None):
   elif args.command in ('cat', 'tail'):
     if args.stderr and not d.stderr:
       fail('daemon has no separate stderr')
-    args = [args.command, d.stderr if args.stderr else d.stdout]
+    sub_argv = [args.command, d.stderr if args.stderr else d.stdout]
     if args.command == 'tail' and args.follow:
-      args.insert(1, '-f')
+      sub_argv.insert(1, '-f')
     try:
-      return subprocess.call(args)
+      return subprocess.call(sub_argv)
     except KeyboardInterrupt:
       return 2
   else:
