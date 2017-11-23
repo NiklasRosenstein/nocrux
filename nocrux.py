@@ -547,7 +547,7 @@ def main(argv=None):
         return subprocess.call(cmd, shell=True, env=env)
       except KeyboardInterrupt:
         return 2
-    fail('invalid command: {}'.format(command))
+    fail('invalid command: {}'.format(args.command))
 
 
 if ('require' in globals() and require.main == module) or __name__ == '__main__':
