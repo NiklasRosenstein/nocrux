@@ -327,6 +327,7 @@ class ConfigParser(object):
     strex.Keyword('left_bracket', '{'),
     strex.Keyword('right_bracket', '}'),
     strex.Keyword('semicolon', ';'),
+    strex.Charset('comment', '#'),
     strex.Charset('value', set(map(chr, range(0,255))) - set('{};')),  # TODO
   ]
 
@@ -340,9 +341,12 @@ class ConfigParser(object):
     section = ConfigParser.Section(name, value, [], [])
     while True:
       if not expect_closing:
-        key = lexer.next('key', 'eof')
+        key = lexer.next('key', 'comment', 'eof')
       else:
-        key = lexer.next('key', 'right_bracket')
+        key = lexer.next('key', 'comment', 'right_bracket')
+      if key.type == 'comment':
+        lexer.scanner.readline()
+        continue
       if key.type in ('right_bracket', 'eof'): break
       value = lexer.next('value', weighted=True)
       if value: value = value.value.strip()

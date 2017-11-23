@@ -89,6 +89,7 @@ __v2.0.3__
   `$DAEMON_STDERR` (see issue #22)
 - Add support for `daemon{ root; }` field which will change the parent directory
   of the default paths for the PID and standard output files
+- Add support for `#` comments in the configuration file
 - Change behaviour of `daemon { user; }` option, now serves as a default value
   for the `--as` option
 - Fix configuration loading (`daemon { run; }` may now be preceeded by any other option)
