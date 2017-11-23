@@ -1,4 +1,0 @@
-tag v{VERSION}
-upgrade package.json:  "version": "{VERSION}
-upgrade nocrux.py:__version__ = '{VERSION}'
-upgrade setup.py:  version='{VERSION}',

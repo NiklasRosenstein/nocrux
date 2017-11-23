@@ -30,8 +30,8 @@ __Requirements__
 
 __Installation__
 
-    $ nodepy-pm install @NiklasRosenstein/nocrux  # or
-    $ pip3 install nocrux
+    $ pip3 install nocrux    # or
+    $ nodepy-pm install git+https://github.com/NiklasRosenstein/nocrux.git@v2.0.2
 
 __A note about daemon termination__
 
@@ -78,8 +78,10 @@ Below is an illustration of the configuration format:
 
 __v2.0.3__
 
+- update for Node.py 2
 - support environment variable substition in the `daemon > export` field
-- rework command-line interface with Click
+- fix loading of configuration, now any other option can preceed the `run`
+  option
 - support custom signals for termination and killing a daemon process
   (see issue #21)
 - support custom daemon subcommands that have access to the following

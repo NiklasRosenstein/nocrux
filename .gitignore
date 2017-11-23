@@ -1,5 +1,5 @@
 README.rst
-nodepy_modules/
+.nodepy/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
