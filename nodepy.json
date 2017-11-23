@@ -3,17 +3,17 @@
   "version": "2.0.2",
   "description": "a painless per-user daemon manager",
   "license": "MIT",
+  "main": "nocrux.py",
   "authors": [
     "rosensteinniklas@gmail.com"
   ],
-  "bin": {
-    "nocrux": "nocrux"
-  },
-  "include": [
-    "nocrux.py",
-    "index.py"
-  ],
   "pip_dependencies": {
     "nr": ">=1.4.6"
+  },
+  "include": [
+    "nocrux.py"
+  ],
+  "bin": {
+    "nocrux": "nocrux"
   }
 }
