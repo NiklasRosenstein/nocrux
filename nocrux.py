@@ -446,6 +446,15 @@ def load_config(filename=None):
   return True
 
 
+def reindent(text, indent):
+  lines = textwrap.dedent(text).split('\n')
+  while lines and not lines[0].strip():
+    lines.pop(0)
+  while lines and not lines[-1].strip():
+    lines.pop()
+  return indent + ('\n' + indent).join(lines)
+
+
 def rerun_with_sudo(args):
   assert args.sudo or args.as_
   sudo_argv = ['sudo']
@@ -465,11 +474,88 @@ def rerun_with_sudo(args):
 
 
 def main(argv=None):
-  """
-  Available COMMANDs: start, stop, restart, status, pid, cat, tail
-  """
+  parser = argparse.ArgumentParser(description=reindent("""
+    Nocrux is a daemon process manager that is easy to configure and can
+    operate on the user- or root-level. The nocrux configuration syntax is
+    similar to Nginx. All users configuration file is in ~/.nocrux/conf,
+    except for the root user, which is in /etc/nocrux/conf.
 
-  parser = argparse.ArgumentParser()
+    This will start your $EDITOR to open the configuration file:
+
+        $ nocrux -e
+
+    The main namespace has the options and default values below:
+
+        root ~/.nocrux/run;
+        kill_timeout 10;
+
+    You can also include other files like this (relative paths are considered
+    relative to the configuration file):
+
+        include ~/more-nocrux-config.txt;
+
+    To configure a new daemon, you start a `daemon` section, specify the name
+    and then the daemon's options in the news scope.
+
+        daemon jupyter {
+          cwd ~;
+          run jupyter notebook;
+        }
+
+    You can now start the daemon with:
+
+        $ nocrux jupyter start
+        [nocrux]: (jupyter) starting "jupyter notebook"
+        [nocrux]: (jupyter) started (pid: 10117)
+
+    The following commands are available for all daemons:
+
+      - start
+      - stop
+      - restart
+      - status
+      - pid
+      - cat
+      - tail
+
+    You can specify additional commands like this:
+
+        daemon jupyter {
+          cwd ~;
+          run jupyter notebook;
+          command uptime echo $(($(date +%s) - $(date +%s -r $DAEMON_PIDFILE))) seconds;
+        }
+
+    Now to run this command:
+
+        $ nocrux jupyter uptime;
+        3424 seconds;
+
+    Here's a daemon configuration with all available options and the
+    respective default or example values:
+
+        daemon test {
+          # Example values:
+          export PATH=/usr/sbin:$PATH;
+          export DEBUG=1;
+          run ~/Desktop/mytestdaemon.sh arg1 "arg 2";
+          cwd ~;
+          command uptime echo $(($(date +%s) - $(date +%s -r $DAEMON_PIDFILE))) seconds;
+          requires daemon1 daemon2;
+
+          # Options with their respective defaults:
+          user me;
+          group me;
+          stdin /dev/null;
+          stdout $root/$name.out;
+          stderr $stdout;
+          pidfile $root/$name.pid;
+          signal term TERM;
+          signal kill KILL;
+        }
+    """, indent='  '),
+    formatter_class=argparse.RawDescriptionHelpFormatter
+  )
   parser.add_argument('daemon', nargs='?', help='The name of the daemon.')
   parser.add_argument('command', nargs='?', help='A command to execute on the specified daemon.')
   parser.add_argument('-e', '--edit', action='store_true', help='Edit the nocrux configuration file.')
