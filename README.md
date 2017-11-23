@@ -7,26 +7,108 @@ daemons to the init process.
 __Synopsis__
 
 ```
-Usage: nocrux [OPTIONS] [DAEMON] [COMMAND]
+usage: nocrux [-h] [-e] [-l] [-f] [--sudo] [--as AS_] [--stderr] [--version]
+              [daemon] [command]
 
-  Available COMMANDs: start, stop, restart, status, pid, cat, tail
+  Nocrux is a daemon process manager that is easy to configure and can
+  operate on the user- or root-level. The nocrux configuration syntax is
+  similar to Nginx. All users configuration file is in ~/.nocrux/conf,
+  except for the root user, which is in /etc/nocrux/conf.
+  
+  This will start your $EDITOR to open the configuration file:
+  
+      $ nocrux -e
+  
+  The main namespace has the options and default values below:
+  
+      root ~/.nocrux/run;
+      kill_timeout 10;
+  
+  You can also include other files like this (relative paths are considered
+  relative to the configuration file):
+  
+      include ~/more-nocrux-config.txt;
+  
+  To configure a new daemon, you start a `daemon` section, specify the name
+  and then the daemon's options in the news scope.
+  
+      daemon jupyter {
+        cwd ~;
+        run jupyter notebook;
+      }
+  
+  You can now start the daemon with:
+  
+      $ nocrux jupyter start
+      [nocrux]: (jupyter) starting "jupyter notebook"
+      [nocrux]: (jupyter) started (pid: 10117)
+  
+  The following commands are available for all daemons:
+  
+    - start
+    - stop
+    - restart
+    - status
+    - pid
+    - cat
+    - tail
+  
+  You can specify additional commands like this:
+  
+      daemon jupyter {
+        cwd ~;
+        run jupyter notebook;
+        command uptime echo $(($(date +%s) - $(date +%s -r $DAEMON_PIDFILE))) seconds;
+      }
+  
+  Now to run this command:
+  
+      $ nocrux jupyter uptime;
+      3424 seconds;
+  
+  Here's a daemon configuration with all available options and the
+  respective default or example values:
+  
+      daemon test {
+        # Example values:
+        export PATH=/usr/sbin:$PATH;
+        export DEBUG=1;
+        run ~/Desktop/mytestdaemon.sh arg1 "arg 2";
+        cwd ~;
+        command uptime echo $(($(date +%s) - $(date +%s -r $DAEMON_PIDFILE))) seconds;
+        requires daemon1 daemon2;
+  
+        # Options with their respective defaults:
+        user me;
+        group me;
+        stdin /dev/null;
+        stdout $root/$name.out;
+        stderr $stdout;
+        pidfile $root/$name.pid;
+        signal term TERM;
+        signal kill KILL;
+      }
 
-Options:
+positional arguments:
+  daemon        The name of the daemon.
+  command       A command to execute on the specified daemon.
+
+optional arguments:
+  -h, --help    show this help message and exit
   -e, --edit    Edit the nocrux configuration file.
   -l, --list    List up all daemons and their status.
   -f, --follow  Pass -f to the tail command.
+  --sudo        Re-invoke the same command with sudo.
+  --as AS_      Run the command as the specified user. Overrides --sudo.
   --stderr      Choose stderr instead of stdout for the cat/tail command.
   --version     Print the nocrux version and exit.
-  --help        Show this message and exit.
 ```
 
 __Requirements__
 
 - Unix-like OS (tested on Ubuntu 25.05, Debian Jessie, macOS Sierra)
 - Python 3.4+
-- [Node.py] (optional)
-
-[Node.py]: https://github.com/nodepy/nodepy
+- [Node.py](https://nodepy.org) (optional)
 
 __Installation__
 
@@ -45,34 +127,6 @@ doing that for Bash scripts. For very simple scripts that just set up an
 environment, I recommend the `exec` approach.
 
   [0]: http://unix.stackexchange.com/q/146756/73728
-
-## Configuration
-
-You can use `nocrux --edit` to open the `$EDITOR` (defaults to `nano`) with
-the nocrux configuration file. The configuration file must be located at
-`~/.nocrux/conf` but can also be placed globally in `/etc/nocrux/conf`.
-
-Below is an illustration of the configuration format:
-
-    root ~/.nocrux/run;
-    kill_timeout 10;
-    include conf.d/*;
-
-    daemon test {
-        export PATH=/usr/sbin:$PATH;
-        run ~/Desktop/mytestdaemon.sh arg1 "arg 2";
-        cwd ~;
-        user me;
-        group me;
-        stdin /dev/null;
-        stdout $root/$name.out;
-        stderr $stdout;
-        pidfile $root/$name.pid;
-        signal term TERM;
-        signal kill KILL;
-        command uptime echo $(($(date +%s) - $(date +%s -r $DAEMON_PIDFILE))) seconds;
-        requires daemon1 daemon2;
-    }
 
 ## Changelog
 
