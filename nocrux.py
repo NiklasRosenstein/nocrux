@@ -50,7 +50,7 @@ config = {
 daemons = {}
 
 
-def abspath(path):
+def abspath(path, root=None):
   ''' Make *path* absolute if it not already is. Relative paths
   are assumed relative to the ``config['root']`` configuration
   parameter.
@@ -61,7 +61,9 @@ def abspath(path):
 
   path = os.path.expanduser(path)
   if not os.path.isabs(path):
-    return os.path.abspath(os.path.join(config['root'], path))
+    if not root:
+      root = config['root']
+    return os.path.abspath(os.path.join(root, path))
   return path
 
 
@@ -99,13 +101,13 @@ class Daemon(object):
   Status_Stopped = 'stopped'
 
   def __init__(
-      self, name, prog, args=(), cwd=None, user=None, group=None,
+      self, name, prog, root=None, args=(), cwd=None, user=None, group=None,
       stdin=None, stdout=None, stderr=None, pidfile=None, requires=None,
       env=None, sigterm=None, sigkill=None, commands=None):
     if not pidfile:
-      pidfile = abspath(name + '.pid')
+      pidfile = abspath(name + '.pid', root)
     if stdout is None:
-      stdout = abspath(name + '.out')
+      stdout = abspath(name + '.out', root)
 
     if not requires:
       requires = []
@@ -431,6 +433,8 @@ def load_config(filename=None):
         if cmdname in AVAILABLE_DAEMON_COMMANDS:
           raise ValueError('daemom {}: command name {!r} is reserved'.format(name, args[0]))
         params['commands'][cmdname] = cmd
+      elif key == 'root':
+        params['root'] = value.strip()
       else:
         raise ValueError('daemon {}: unexpected config key: {}'.format(name, item))
     daemons[name] = Daemon(**params)

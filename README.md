@@ -87,7 +87,9 @@ __v2.0.3__
 - Add support for custom daemon subcommands that have access to the following
   environment variables: `$DAEMON_PID`, `$DAEMON_PIDFILE`, `$DAEMON_STDOUT`,
   `$DAEMON_STDERR` (see issue #22)
-- Fix configuration loading (`run;` may now be preceeded by any other option)
+- Add support for `daemon{ root; }` field which will change the parent directory
+  of the default paths for the PID and standard output files
+- Fix configuration loading (`daemon { run; }` may now be preceeded by any other option)
 - Fix `-e, --edit` now opens the editor always for the user's file
 
 __v2.0.2__
