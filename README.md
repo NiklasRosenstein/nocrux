@@ -4,7 +4,14 @@ Nocrux is an easily configurable daemon manager that can be used by any user
 on the system. It uses double-forks to transfer cleanup responsibility of
 daemons to the init process.
 
-__Synopsis__
+* [Synopsis](#synopsis)
+* [Requirements](#requirements)
+* [Installation](#installation)
+* [A note about child processes](#a-note-about-child-processes)
+* [A note about managing daemons under a different user](#a-note-about-managing-daemons-under-a-different-user)
+* [Changelog](#changelog)
+
+### Synopsis
 
 ```
 usage: nocrux [-h] [-e] [-l] [-f] [--sudo] [--as AS_] [--stderr] [--version]
@@ -104,29 +111,59 @@ optional arguments:
   --version     Print the nocrux version and exit.
 ```
 
-__Requirements__
+### Requirements
 
-- Unix-like OS (tested on Ubuntu 25.05, Debian Jessie, macOS Sierra)
+- Unix-like OS (tested on Ubuntu 15-17, Debian Jessie, macOS Sierra)
 - Python 3.4+
 - [Node.py](https://nodepy.org) (optional)
 
-__Installation__
+### Installation
 
-    $ pip3 install nocrux    # or
-    $ nodepy-pm install git+https://github.com/NiklasRosenstein/nocrux.git@v2.0.3
+    $ pip3 install --user nocrux    # or
+    $ nodepy-pm install git+https://github.com/NiklasRosenstein/nocrux.git@v2.0.3 --global
 
-__A note about daemon termination__
+### A note about child processes
 
-*nocrux* can only send SIGTERM (and alternatively SIGKILL if the process
-doesn't respond to the previous signal) to the main process that was also
-started with *nocrux*. If that process spawns any subprocess, it must take
-care of forwarding the signals to the child processes.
-
-The thread [Forward SIGTERM to child in Bash][0] contains some information on
-doing that for Bash scripts. For very simple scripts that just set up an
-environment, I recommend the `exec` approach.
+Nocrux can only send SIGTERM or SIGKILL to the **main process** that it
+originally started. If that process spawns any child precesses, it must take
+care of forwarding the signal! The thread [*Forward SIGTERM to child in Bash*][0]
+contains some information on doing that for Bash scripts. For very simple scripts
+that just set up an environment, I recommend the `exec` approach as described
+in the link.
 
   [0]: http://unix.stackexchange.com/q/146756/73728
+
+### A note about managing daemons under a different user
+
+Example:
+
+    daemon gogs {
+      user gogs;
+      cwd /home/gogs/gogs;
+      run ./gogs web;
+    }
+
+If you're trying to manage a daemon that will be started by nocrux under a
+different user, you need the permissions to do so. For example, the superuser
+is allowed to do so and using nocrux as root should work immediately.
+
+However, if you are not already the root user, nocrux will by default try to
+re-run itself as the user specified in the daemon, eg. in this case:
+
+    sudo gogs NOCRUX_CONFIG=/home/niklas/.nocrux/conf /home/niklas/.local/bin/nocrux gogs start
+
+This will only work if
+
+1. You installed nodepy system-wide, **or** you installed it with Node.py
+   and the `gogs` user can read the path of the nocrux executable and the
+   nocrux package directory
+2. The `gogs` user can read your nocrux configuration file
+
+Otherwise, you may be greeted with one of the following error messages:
+
+* sudo: unable to execute /home/niklas/.local/bin/nocrux: Permission denied
+* pkg_resources.DistributionNotFound: The 'nocrux==2.0.3' distribution was not found and is required by the application
+* ModuleNotFoundError: No module named 'nodepy'
 
 ## Changelog
 
