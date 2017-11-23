@@ -442,6 +442,23 @@ def load_config(filename=None):
   return True
 
 
+def rerun_with_sudo(args):
+  assert args.sudo or args.as_
+  sudo_argv = ['sudo']
+  if args.as_: sudo_argv.extend(['-u', args.as_])
+  sudo_argv.append('NOCRUX_CONFIG={}'.format(get_config_filename()))
+  sudo_argv.append('NOCRUX_AS={}'.format(args.as_))
+  sudo_argv.append(sys.argv[0])
+  if args.daemon: sudo_argv.append(args.daemon)
+  if args.command: sudo_argv.append(args.command)
+  if args.edit: sudo_argv.append('--edit')
+  if args.list: sudo_argv.append('--list')
+  if args.follow: sudo_argv.append('--follow')
+  if args.stderr: sudo_argv.append('--stderr')
+  if args.version: sudo_argv.append('--version')
+  return subprocess.call(sudo_argv)
+
+
 def main(argv=None):
   """
   Available COMMANDs: start, stop, restart, status, pid, cat, tail
@@ -462,19 +479,8 @@ def main(argv=None):
     print(msg, file=sys.stderr)
     sys.exit(code)
 
-  if args.sudo or args.as_:
-    sudo_argv = ['sudo']
-    if args.as_: sudo_argv.extend(['-u', args.as_])
-    sudo_argv.append('NOCRUX_CONFIG={}'.format(get_config_filename()))
-    sudo_argv.append(sys.argv[0])
-    if args.daemon: sudo_argv.append(args.daemon)
-    if args.command: sudo_argv.append(args.command)
-    if args.edit: sudo_argv.append('--edit')
-    if args.list: sudo_argv.append('--list')
-    if args.follow: sudo_argv.append('--follow')
-    if args.stderr: sudo_argv.append('--stderr')
-    if args.version: sudo_argv.append('--version')
-    return subprocess.call(sudo_argv)
+  if (not args.daemon or not args.command) and (args.sudo or args.as_):
+    return rerun_with_sudo(args)
 
   if args.version:
     print('nocrux v{}'.format(__version__))
@@ -499,6 +505,13 @@ def main(argv=None):
   if args.daemon not in daemons:
     fail('no such daemon: {}'.format(args.daemon))
   d = daemons[args.daemon]
+
+  # Prefer to use sudo to start the daemon.
+  if d.user and not args.as_:
+    args.as_ = d.user
+
+  if args.sudo or (args.as_ and os.getenv('NOCRUX_AS') != args.as_):
+    return rerun_with_sudo(args)
 
   if args.command == 'start':
     d.start()
